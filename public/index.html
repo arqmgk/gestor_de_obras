@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Gestor de Obra</title>
+  <style>
+    body { font-family: Arial; margin: 20px; }
+    .card { border: 1px solid #ccc; padding: 15px; margin-bottom: 15px; }
+    #viewer { width: 100%; height: 400px; background: #eee; }
+  </style>
+</head>
+<body>
+
+<h1>Gestión de Obras</h1>
+
+<div class="card">
+  <h2>Crear Obra</h2>
+  <input id="obraNombre" placeholder="Nombre obra" />
+  <input id="obraDireccion" placeholder="Dirección" />
+  <button onclick="crearObra()">Crear Obra</button>
+</div>
+
+<div class="card">
+  <h2>Obras</h2>
+  <select id="obraSelect"></select>
+  <button onclick="cargarTasks()">Cargar Tareas</button>
+</div>
+
+<div class="card">
+  <h2>Crear Tarea</h2>
+  <input id="taskTitulo" placeholder="Título" />
+  <input id="taskCantidad" type="number" placeholder="Cantidad total" />
+  <input id="taskUnidad" placeholder="Unidad (m2, unidad, etc)" />
+  <button onclick="crearTarea()">Crear Tarea</button>
+</div>
+
+<div class="card">
+  <h2>Tareas</h2>
+  <select id="taskSelect"></select>
+  <p>Unidad: <span id="unidadLabel">-</span></p>
+
+  <input id="cantidadInput" type="number" placeholder="Cantidad" />
+  <textarea id="observaciones" placeholder="Observaciones"></textarea>
+  <br/><br/>
+  <button onclick="enviarMedicion()">Agregar Medición</button>
+</div>
+
+<div class="card">
+  <h2>Progreso</h2>
+  <p>Progreso: <span id="progresoText">0%</span></p>
+  <p>Ejecutado: <span id="ejecutadoText">0</span></p>
+</div>
+
+<div class="card">
+  <h2>IFC Viewer (base)</h2>
+  <div id="viewer"></div>
+</div>
+
+<script>
+let obras = [];
+let tasks = [];
+
+// Crear obra
+async function crearObra() {
+  const nombre = document.getElementById('obraNombre').value;
+  const direccion = document.getElementById('obraDireccion').value;
+
+  await fetch('/api/obras', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nombre, direccion })
+  });
+
+  document.getElementById('obraNombre').value = '';
+  document.getElementById('obraDireccion').value = '';
+
+  cargarObras();
+}
+
+// Crear tarea
+async function crearTarea() {
+  const titulo = document.getElementById('taskTitulo').value;
+  const cantidad_total = document.getElementById('taskCantidad').value;
+  const unidad = document.getElementById('taskUnidad').value;
+  const obraId = document.getElementById('obraSelect').value;
+
+  await fetch('/api/tasks', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ titulo, cantidad_total, unidad, obraId })
+  });
+
+  document.getElementById('taskTitulo').value = '';
+  document.getElementById('taskCantidad').value = '';
+  document.getElementById('taskUnidad').value = '';
+
+  cargarTasks();
+}
+
+// Cargar obras
+async function cargarObras() {
+  const res = await fetch('/api/obras');
+  obras = await res.json();
+
+  const select = document.getElementById('obraSelect');
+  select.innerHTML = '';
+
+  obras.forEach(obra => {
+    const option = document.createElement('option');
+    option.value = obra.id;
+    option.textContent = obra.nombre;
+    select.appendChild(option);
+  });
+}
+
+// Cargar tareas por obra
+async function cargarTasks() {
+  const obraId = document.getElementById('obraSelect').value;
+
+  const res = await fetch(`/api/obras/${obraId}`);
+  const data = await res.json();
+
+  tasks = data.tasks || [];
+
+  const select = document.getElementById('taskSelect');
+  select.innerHTML = '';
+
+  tasks.forEach(task => {
+    const option = document.createElement('option');
+    option.value = task.id;
+    option.textContent = task.titulo;
+    select.appendChild(option);
+  });
+}
+
+// Cambiar unidad
+const taskSelect = document.getElementById('taskSelect');
+
+taskSelect.addEventListener('change', () => {
+  const taskId = Number(taskSelect.value);
+  const tarea = tasks.find(t => t.id === taskId);
+  document.getElementById('unidadLabel').innerText = tarea?.unidad || '-';
+});
+
+// Enviar medición
+async function enviarMedicion() {
+  const taskId = taskSelect.value;
+  const cantidad = document.getElementById('cantidadInput').value;
+  const observaciones = document.getElementById('observaciones').value;
+
+  await fetch(`/api/tasks/${taskId}/mediciones`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cantidad: Number(cantidad), observaciones })
+  });
+
+  const progreso = await fetch(`/api/tasks/${taskId}/progreso`).then(r => r.json());
+
+  document.getElementById('progresoText').innerText = progreso.progreso.toFixed(1) + '%';
+  document.getElementById('ejecutadoText').innerText = progreso.ejecutado;
+
+  document.getElementById('cantidadInput').value = '';
+}
+
+// Inicial
+cargarObras();
+</script>
+
+</body>
+</html>
