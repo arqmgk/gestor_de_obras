@@ -4,7 +4,7 @@ import obrasRoutes from './routes_crud/obras.js';
 import tasksRoutes from './routes_crud/tasks.js';
 import logger from './middleware/logger.js';
 import errorHandler from './middleware/error.js';
-import notFound from './middleware/notfound.js';
+import notFound from './middleware/Notfound.js';
 
 const app = express();
 

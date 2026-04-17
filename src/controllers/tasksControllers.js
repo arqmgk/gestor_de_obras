@@ -8,19 +8,19 @@ export const getTasks = async (req, res, next) => {
     try {
         const { estado, obraId } = req.query;
 
-        let query = 'SELECT * FROM tasks';
-        let values = [];
+let query = 'SELECT * FROM tasks';
+let values = [];
 
-        if (estado && obraId) {
-            query += ' WHERE estado = $1 AND obra_id = $2';
-            values.push(estado, obraId);
-        } else if (estado) {
-            query += ' WHERE estado = $1';
-            values.push(estado);
-        } else if (obraId) {
-            query += ' WHERE obra_id = $1';
-            values.push(obraId);
-        }
+if (estado && obraId) {
+    query += ' WHERE estado = $1 AND obra_id = $2';
+    values.push(estado, Number(obraId));
+} else if (estado) {
+    query += ' WHERE estado = $1';
+    values.push(estado);
+} else if (obraId) {
+    query += ' WHERE obra_id = $1';
+    values.push(Number(obraId));
+}
 
         const result = await pool.query(query, values);
 
@@ -240,7 +240,7 @@ export const addMedicion = async (req, res, next) => {
         const taskId = Number(req.params.id);
         const { cantidad } = req.body;
 
-        if (!cantidad) {
+        if (cantidad === undefined || cantidad === null) {
             const error = new Error('Falta cantidad');
             error.status = 400;
             return next(error);
