@@ -63,7 +63,17 @@ export const getTask = async (req, res, next) => {
 
 export const createTask = async (req, res, next) => {
     try {
-        const { titulo, estado, obraId, prioridad, fecha_inicio, fecha_fin, responsable, unidad } = req.body;
+        const { 
+            titulo, 
+            estado, 
+            obraId, 
+            prioridad, 
+            fecha_inicio, 
+            fecha_fin, 
+            responsable, 
+            unidad,
+            cantidad_total
+        } = req.body;
 
         if (!titulo) {
             const error = new Error('Falta título');
@@ -71,22 +81,43 @@ export const createTask = async (req, res, next) => {
             return next(error);
         }
 
-        if (fecha_inicio && fecha_fin && fecha_inicio > fecha_fin) {
-    const error = new Error('Fecha fin no puede ser menor a inicio');
-    error.status = 400;
-    return next(error);
-}
-
         if (!unidad) {
-    const error = new Error('Falta unidad');
-    error.status = 400;
-    return next(error);
-}
+            const error = new Error('Falta unidad');
+            error.status = 400;
+            return next(error);
+        }
+
+        if (fecha_inicio && fecha_fin && fecha_inicio > fecha_fin) {
+            const error = new Error('Fecha fin no puede ser menor a inicio');
+            error.status = 400;
+            return next(error);
+        }
 
         const result = await pool.query(
-            'INSERT INTO tasks (titulo, estado, obra_id, prioridad, fecha_inicio, fecha_fin, responsable, unidad) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
-            [titulo, estado || 'pendiente', obraId, prioridad || 'media'
-, fecha_inicio, fecha_fin, responsable, unidad ]
+            `INSERT INTO tasks (
+                titulo, 
+                estado, 
+                obra_id, 
+                prioridad, 
+                fecha_inicio, 
+                fecha_fin, 
+                responsable, 
+                unidad,
+                cantidad_total
+            ) 
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+            RETURNING *`,
+            [
+                titulo,
+                estado || 'pendiente',
+                obraId,
+                prioridad || 'media',
+                fecha_inicio,
+                fecha_fin,
+                responsable,
+                unidad,
+                cantidad_total || 0
+            ]
         );
 
         res.status(201).json(result.rows[0]);
@@ -238,7 +269,7 @@ export const getProgresoTask = async (req, res, next) => {
 export const addMedicion = async (req, res, next) => {
     try {
         const taskId = Number(req.params.id);
-        const { cantidad } = req.body;
+        const { cantidad, observaciones } = req.body;
 
         if (cantidad === undefined || cantidad === null) {
             const error = new Error('Falta cantidad');
@@ -246,16 +277,33 @@ export const addMedicion = async (req, res, next) => {
             return next(error);
         }
 
-        // 1️⃣ insertar medición
-        const result = await pool.query(
-            'INSERT INTO mediciones (task_id, cantidad) VALUES ($1, $2) RETURNING *',
-            [taskId, cantidad]
+        // 🔥 VALIDACIÓN: no pasarse del total
+
+        const totalRes = await pool.query(
+            'SELECT cantidad_total FROM tasks WHERE id = $1',
+            [taskId]
         );
 
-        // 2️⃣ (opcional) actualizar acumulado viejo
-        await pool.query(
-            'UPDATE tasks SET cantidad_ejecutada = cantidad_ejecutada + $1 WHERE id = $2',
-            [cantidad, taskId]
+        const ejecutadoRes = await pool.query(
+            'SELECT COALESCE(SUM(cantidad),0) as total FROM mediciones WHERE task_id = $1',
+            [taskId]
+        );
+
+        const total = totalRes.rows[0]?.cantidad_total || 0;
+        const ejecutado = ejecutadoRes.rows[0]?.total || 0;
+
+        if (total > 0 && (ejecutado + cantidad > total)) {
+            const error = new Error('Supera la cantidad total de la tarea');
+            error.status = 400;
+            return next(error);
+        }
+
+        // ✅ INSERT
+        const result = await pool.query(
+            `INSERT INTO mediciones (task_id, cantidad, observaciones)
+             VALUES ($1, $2, $3)
+             RETURNING *`,
+            [taskId, cantidad, observaciones || null]
         );
 
         res.status(201).json(result.rows[0]);
@@ -264,6 +312,35 @@ export const addMedicion = async (req, res, next) => {
         next(error);
     }
 };
+
+
+//avance progress bar
+
+export const getTasksWithProgreso = async (req, res, next) => {
+    try {
+        const obraId = Number(req.params.id);
+
+        const result = await pool.query(`
+            SELECT 
+                t.*,
+                COALESCE(SUM(m.cantidad), 0) AS ejecutado,
+                CASE 
+                    WHEN t.cantidad_total = 0 THEN 0
+                    ELSE COALESCE(SUM(m.cantidad), 0) * 100.0 / t.cantidad_total
+                END AS progreso
+            FROM tasks t
+            LEFT JOIN mediciones m ON t.id = m.task_id
+            WHERE t.obra_id = $1
+            GROUP BY t.id
+        `, [obraId]);
+
+        res.json(result.rows);
+
+    } catch (error) {
+        next(error);
+    }
+};
+
 
 //GET mediciones
 

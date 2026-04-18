@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import {getTasks, getTask, createTask, updateTask,deleteTask, getProgresoTask, addMedicion, getMediciones } from '../controllers/tasksControllers.js';
+import {getTasks, getTask, createTask, updateTask,deleteTask, getProgresoTask, addMedicion, getMediciones, getTasksWithProgreso, getProgresoObra  } from '../controllers/tasksControllers.js';
 
 
 
@@ -36,7 +36,17 @@ router.put('/:id', updateTask);
 //DELETE POST
 router.delete('/:id', deleteTask);
 
+//avance progress bar
+
+router.get('/obras/:id/tasks-progreso', getTasksWithProgreso);
 
 
 
 export default router;
+
+//
+router.get('/obras/:id/progreso', getProgresoObra);
+
+
+
+

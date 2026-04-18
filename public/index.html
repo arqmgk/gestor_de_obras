@@ -575,9 +575,13 @@ async function crearTarea() {
   try {
     const r = await fetch(API + '/api/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ titulo, responsable, unidad, cantidad_total, prioridad, estado, fecha_inicio, fecha_fin, obraId: currentObraId }) });
     if (!r.ok) { const d = await r.json(); flash(d.message || 'Error', 'error'); return; }
-    flash('Tarea creada');
-    ['t-titulo','t-resp','t-unidad','t-cant','t-inicio','t-fin'].forEach(id => document.getElementById(id).value = '');
-    volverADetalle();
+   flash('Tarea creada');
+
+['t-titulo','t-resp','t-unidad','t-cant','t-inicio','t-fin']
+  .forEach(id => document.getElementById(id).value = '');
+
+await verDetalle(currentObraId);
+
   } catch { flash('Error de conexión', 'error'); }
 }
 
@@ -615,47 +619,94 @@ async function cargarSelectsObras() {
 async function cargarDashboardCap() {
   const obraId = document.getElementById('cap-obra-select').value;
   const cont = document.getElementById('cap-dashboard-content');
-  if (!obraId) { cont.innerHTML = ''; return; }
+
+  if (!obraId) { 
+    cont.innerHTML = ''; 
+    return; 
+  }
+
   cont.innerHTML = '<p style="color:var(--text3);font-size:13px">Cargando…</p>';
+
   try {
     const [obraR, progR] = await Promise.all([
-      fetch(API + `/api/obras/${obraId}`).then(r => r.json()),
-      fetch(API + `/api/obras/${obraId}/progreso`).then(r => r.json())
-    ]);
+  fetch(API + `/api/obras/${obraId}/tasks-progreso`).then(r => r.json()),
+  fetch(API + `/api/obras/${obraId}/progreso`).then(r => r.json())
+]);
+
+
     const tasks = obraR.tasks || [];
     capTasksCache = tasks;
-    const prog = (progR.progreso || 0).toFixed(1);
+
+    const prog = Number(progR.progreso || 0);
+
     cont.innerHTML = `
       <div class="metrics metrics-3">
-        <div class="metric-card"><div class="metric-label">Avance real</div><div class="metric-value mv-green">${prog}%</div></div>
-        <div class="metric-card"><div class="metric-label">En progreso</div><div class="metric-value mv-blue">${tasks.filter(t => t.estado === 'en_progreso').length}</div></div>
-        <div class="metric-card"><div class="metric-label">Pendientes</div><div class="metric-value mv-amber">${tasks.filter(t => t.estado === 'pendiente').length}</div></div>
+        <div class="metric-card">
+          <div class="metric-label">Avance real</div>
+          <div class="metric-value mv-green">${prog.toFixed(1)}%</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">En progreso</div>
+          <div class="metric-value mv-blue">
+            ${tasks.filter(t => t.estado === 'en_progreso').length}
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">Pendientes</div>
+          <div class="metric-value mv-amber">
+            ${tasks.filter(t => t.estado === 'pendiente').length}
+          </div>
+        </div>
       </div>
+
       <div class="card">
         <div class="card-title">Avance por mediciones</div>
-        <div class="progress-big-track"><div class="progress-big-fill" style="width:${Math.min(prog,100)}%"></div></div>
-        <div style="font-family:var(--mono);font-size:20px;font-weight:600;color:var(--green);margin-top:6px">${prog}% ejecutado</div>
+        <div class="progress-big-track">
+          <div class="progress-big-fill" style="width:${Math.min(prog,100)}%"></div>
+        </div>
+        <div style="font-family:var(--mono);font-size:20px;font-weight:600;color:var(--green);margin-top:6px">
+          ${prog.toFixed(1)}% ejecutado
+        </div>
       </div>
+
       <div class="card">
         <div class="card-title">Tareas asignadas</div>
+
         ${tasks.length ? tasks.map(t => `
           <div class="task-card">
             <div class="task-card-body">
               <div class="task-card-title">${t.titulo}</div>
+
               <div class="task-card-meta">
-                ${badgeEstado(t.estado)} ${badgePrio(t.prioridad)}
+                ${badgeEstado(t.estado)} 
+                ${badgePrio(t.prioridad)}
                 ${t.responsable ? `<span class="td-mono" style="font-size:11px">${t.responsable}</span>` : ''}
-                <span class="td-mono" style="font-size:11px;color:var(--text3)">Fin: ${fmtDate(t.fecha_fin)}</span>
+                <span class="td-mono" style="font-size:11px;color:var(--text3)">
+                  Fin: ${fmtDate(t.fecha_fin)}
+                </span>
               </div>
             </div>
+
             <div class="task-card-prog">
-              <div class="progress-track"><div class="progress-fill" style="width:0%"></div></div>
+              <div class="progress-track">
+                <div class="progress-fill" style="width:${Math.min(t.progreso || 0, 100)}%"></div>
+              </div>
+              <div class="progress-pct">${(t.progreso || 0).toFixed(1)}%</div>
               <div class="progress-pct">${t.unidad || ''}</div>
             </div>
-          </div>`).join('') : '<p class="empty">Sin tareas asignadas</p>'}
-      </div>`;
-  } catch { cont.innerHTML = '<p style="color:var(--red);font-size:13px">Error al cargar. ¿La API está corriendo?</p>'; }
+          </div>
+        `).join('') : '<p class="empty">Sin tareas asignadas</p>'}
+      </div>
+    `;
+
+  } catch (err) {
+    console.error(err);
+    cont.innerHTML = '<p style="color:var(--red);font-size:13px">Error al cargar. ¿La API está corriendo?</p>';
+  }
 }
+
 
 /* ══ CAP MEDICIÓN ══ */
 async function cargarTasksParaMedicion() {
