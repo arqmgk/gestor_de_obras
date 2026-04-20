@@ -1,30 +1,24 @@
-import { Router } from 'express';
+import express from 'express';
 import {
-    getObras,
-    getObra,
-    createObra,
-    updateObra,
-    deleteObra,
-    getProgresoObra
+  getObras,
+  getObraById,
+  createObra,
+  deleteObra,
+  getProgresoObra,
+  getTasksWithProgreso
 } from '../controllers/obrasController.js';
 
-import { getTasksByObra } from '../controllers/tasksControllers.js';
-
-const router = Router();
+const router = express.Router();
 
 router.get('/', getObras);
+router.get('/:id', getObraById);
 router.post('/', createObra);
+router.delete('/:id', deleteObra);
 
-//GET por avance de obra
+// progreso
 router.get('/:id/progreso', getProgresoObra);
 
-
-// relación
-router.get('/:id/tasks', getTasksByObra);
-
-// CRUD individual
-router.get('/:id', getObra);
-router.put('/:id', updateObra);
-router.delete('/:id', deleteObra);
+// tasks con progreso
+router.get('/:id/tasks', getTasksWithProgreso);
 
 export default router;

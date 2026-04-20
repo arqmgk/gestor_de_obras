@@ -93,6 +93,11 @@ export const createTask = async (req, res, next) => {
             return next(error);
         }
 
+        if (!cantidad_total || cantidad_total <= 0) {
+  return res.status(400).json({ message: 'Cantidad total inválida' });
+}
+
+
         const result = await pool.query(
             `INSERT INTO tasks (
                 titulo, 
@@ -116,7 +121,7 @@ export const createTask = async (req, res, next) => {
                 fecha_fin,
                 responsable,
                 unidad,
-                cantidad_total || 0
+                cantidad_total
             ]
         );
 
@@ -134,23 +139,26 @@ export const createTask = async (req, res, next) => {
 export const updateTask = async (req, res, next) => {
     try {
         const id = Number(req.params.id);
-        const { titulo, estado, obraId, prioridad, fecha_inicio, fecha_fin, responsable, unidad } = req.body;
+        const { titulo, estado, obraId, prioridad, fecha_inicio, fecha_fin, responsable, unidad, cantidad_total } = req.body;
 
         if (!titulo) {
-    const error = new Error('Falta título');
-    error.status = 400;
-    return next(error);
-}
-        if (fecha_inicio && fecha_fin && fecha_inicio > fecha_fin) {
-    const error = new Error('Fecha fin no puede ser menor a inicio');
-    error.status = 400;
-    return next(error);
-}
+            const error = new Error('Falta título');
+            error.status = 400;
+            return next(error);
+        }
+
         if (!unidad) {
-    const error = new Error('Falta unidad');
-    error.status = 400;
-    return next(error);
-}
+            const error = new Error('Falta unidad');
+            error.status = 400;
+            return next(error);
+        }
+
+        if (fecha_inicio && fecha_fin && fecha_inicio > fecha_fin) {
+            const error = new Error('Fecha fin no puede ser menor a inicio');
+            error.status = 400;
+            return next(error);
+        }
+
         const result = await pool.query(
             `UPDATE tasks
              SET titulo = $1,
@@ -160,19 +168,18 @@ export const updateTask = async (req, res, next) => {
                  fecha_inicio = $5,
                  fecha_fin = $6,
                  responsable = $7,
-                 unidad = $8
-             WHERE id = $9
+                 unidad = $8,
+                 cantidad_total = $9
+             WHERE id = $10
              RETURNING *`,
-            [titulo, estado, obraId, prioridad, fecha_inicio, fecha_fin, responsable, unidad, id]
+            [titulo, estado, obraId, prioridad, fecha_inicio, fecha_fin, responsable, unidad, cantidad_total ?? 0, id]
         );
 
         if (result.rows.length === 0) {
-            const error = new Error('Task not found');
+            const error = new Error('Tarea no encontrada');
             error.status = 404;
             return next(error);
         }
-
-        
 
         res.json(result.rows[0]);
 
@@ -210,20 +217,21 @@ export const deleteTask = async (req, res, next) => {
 
 //Endpoint by obra/tasks
 export const getTasksByObra = async (req, res, next) => {
-    try {
-        const obraId = Number(req.params.id);
+  try {
+    const obraId = Number(req.params.id);
 
-        const result = await pool.query(
-            'SELECT * FROM tasks WHERE obra_id = $1',
-            [obraId]
-        );
+    const result = await pool.query(
+      'SELECT * FROM tasks WHERE obra_id = $1',
+      [obraId]
+    );
 
-        res.json(result.rows);
+    res.json(result.rows);
 
-    } catch (error) {
-        next(error);
-    }
+  } catch (error) {
+    next(error);
+  }
 };
+
 
 //avance por tarea
 
@@ -231,37 +239,35 @@ export const getProgresoTask = async (req, res, next) => {
     try {
         const taskId = Number(req.params.id);
 
-        const result = await pool.query(
-            `
+        const result = await pool.query(`
             SELECT 
                 t.id,
                 t.titulo,
-                t.cantidad_total,
-                COALESCE(SUM(m.cantidad), 0) AS ejecutado,
+                t.unidad,
+                COALESCE(t.cantidad_total,0) AS cantidad_total,
+                COALESCE(SUM(m.cantidad),0) AS ejecutado,
                 CASE 
-                    WHEN t.cantidad_total = 0 THEN 0
-                    ELSE COALESCE(SUM(m.cantidad), 0) * 100.0 / t.cantidad_total
+                    WHEN COALESCE(t.cantidad_total,0) = 0 THEN 0
+                    ELSE COALESCE(SUM(m.cantidad),0) * 100.0 / COALESCE(t.cantidad_total,1)
                 END AS progreso
             FROM tasks t
             LEFT JOIN mediciones m ON t.id = m.task_id
             WHERE t.id = $1
-            GROUP BY t.id
-            `,
-            [taskId]
-        );
+            GROUP BY t.id, t.titulo, t.unidad, t.cantidad_total
+        `, [taskId]);
 
         if (result.rows.length === 0) {
-            const error = new Error('Task no encontrada');
-            error.status = 404;
-            return next(error);
+            return res.status(404).json({ message: 'Task no encontrada' });
         }
 
         res.json(result.rows[0]);
 
     } catch (error) {
+        console.error(error); // 🔥 importante
         next(error);
     }
 };
+
 
 
 // Post mediciones

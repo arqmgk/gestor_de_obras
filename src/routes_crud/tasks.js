@@ -1,52 +1,29 @@
 import { Router } from 'express';
-import {getTasks, getTask, createTask, updateTask,deleteTask, getProgresoTask, addMedicion, getMediciones, getTasksWithProgreso, getProgresoObra  } from '../controllers/tasksControllers.js';
-
-
+import {
+    getTasks,
+    getTask,
+    createTask,
+    updateTask,
+    deleteTask,
+    getProgresoTask,
+    addMedicion,
+    getMediciones
+} from '../controllers/tasksControllers.js';
 
 const router = Router();
 
-
-
-// GET todos
-router.get('/', getTasks);
-
-//GET mediciones
+// MEDICIONES (antes que :id)
 router.get('/:id/mediciones', getMediciones);
-
-
-//POST mediciones
 router.post('/:id/mediciones', addMedicion);
 
-
-//GET por avance
+// PROGRESO
 router.get('/:id/progreso', getProgresoTask);
 
-
-// GET por id
-router.get('/:id', getTask);
-
-// POST crear
+// CRUD
+router.get('/', getTasks);
 router.post('/', createTask);
-
-
-//Update a post
+router.get('/:id', getTask);
 router.put('/:id', updateTask);
-
-
-//DELETE POST
 router.delete('/:id', deleteTask);
 
-//avance progress bar
-
-router.get('/obras/:id/tasks-progreso', getTasksWithProgreso);
-
-
-
 export default router;
-
-//
-router.get('/obras/:id/progreso', getProgresoObra);
-
-
-
-
