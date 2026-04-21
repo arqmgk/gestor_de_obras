@@ -1,0 +1,106 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body, #root { height: 100%; }
+
+:root {
+  /* surfaces */
+  --ink:        #090b0f;
+  --ink2:       #10131a;
+  --ink3:       #181c25;
+  --ink4:       #1f2330;
+  --ink5:       #272c3a;
+
+  /* lines */
+  --line:       rgba(255,255,255,0.055);
+  --line2:      rgba(255,255,255,0.10);
+  --line3:      rgba(255,255,255,0.16);
+
+  /* text */
+  --dust:       #3e4459;
+  --mist:       #6b7189;
+  --fog:        #9da3bc;
+  --snow:       #e4e7f2;
+
+  /* brand — blue (arquitecto) */
+  --arc:        #5b8dee;
+  --arc-dim:    rgba(91,141,238,0.12);
+  --arc-glow:   rgba(91,141,238,0.22);
+  --arc-border: rgba(91,141,238,0.28);
+
+  /* accent — green (capataz) */
+  --sage:        #4ecba0;
+  --sage-dim:    rgba(78,203,160,0.12);
+  --sage-glow:   rgba(78,203,160,0.22);
+  --sage-border: rgba(78,203,160,0.28);
+
+  /* states */
+  --amber:       #f0a84a;
+  --amber-dim:   rgba(240,168,74,0.12);
+  --amber-border:rgba(240,168,74,0.28);
+  --rose:        #e86d6d;
+  --rose-dim:    rgba(232,109,109,0.12);
+  --rose-border: rgba(232,109,109,0.28);
+
+  /* radii */
+  --r:  7px;
+  --r2: 13px;
+  --r3: 18px;
+
+  /* type */
+  --display: 'Syne', sans-serif;
+  --mono:    'JetBrains Mono', monospace;
+}
+
+body {
+  font-family: var(--mono);
+  background: var(--ink);
+  color: var(--snow);
+  font-size: 13px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--ink5); border-radius: 2px; }
+
+/* ── Animations ── */
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes flashIn {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Flash notifications ── */
+#flash-root {
+  position: fixed; top: 20px; right: 24px;
+  z-index: 9999;
+  display: flex; flex-direction: column; gap: 8px;
+  pointer-events: none;
+}
+.flash {
+  background: var(--ink3);
+  border: 1px solid var(--line2);
+  border-radius: var(--r2);
+  padding: 11px 16px;
+  font-size: 12px;
+  animation: flashIn 0.22s ease;
+  max-width: 300px;
+  pointer-events: all;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.55);
+}
+.flash.ok  { border-color: var(--sage-border);  color: var(--sage); }
+.flash.err { border-color: var(--rose-border);  color: var(--rose); }
+.flash.info{ border-color: var(--arc-border);   color: var(--arc);  }
