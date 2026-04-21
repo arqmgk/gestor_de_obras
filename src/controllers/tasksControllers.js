@@ -1,40 +1,30 @@
 import pool from '../config/db.js';
 
-
-// @desc Get all post
-// @route GET api/post
-
 export const getTasks = async (req, res, next) => {
     try {
         const { estado, obraId } = req.query;
 
-let query = 'SELECT * FROM tasks';
-let values = [];
+        let query = 'SELECT * FROM tasks';
+        let values = [];
 
-if (estado && obraId) {
-    query += ' WHERE estado = $1 AND obra_id = $2';
-    values.push(estado, Number(obraId));
-} else if (estado) {
-    query += ' WHERE estado = $1';
-    values.push(estado);
-} else if (obraId) {
-    query += ' WHERE obra_id = $1';
-    values.push(Number(obraId));
-}
+        if (estado && obraId) {
+            query += ' WHERE estado = $1 AND obra_id = $2';
+            values.push(estado, Number(obraId));
+        } else if (estado) {
+            query += ' WHERE estado = $1';
+            values.push(estado);
+        } else if (obraId) {
+            query += ' WHERE obra_id = $1';
+            values.push(Number(obraId));
+        }
 
         const result = await pool.query(query, values);
-
         res.json(result.rows);
 
     } catch (error) {
         next(error);
     }
 };
-
-
-// @desc Get single task
-// @route GET api/task/:id
-
 
 export const getTask = async (req, res, next) => {
     try {
@@ -58,19 +48,16 @@ export const getTask = async (req, res, next) => {
     }
 };
 
-// @desc Create new task
-// @route POST api/tasks
-
 export const createTask = async (req, res, next) => {
     try {
-        const { 
-            titulo, 
-            estado, 
-            obraId, 
-            prioridad, 
-            fecha_inicio, 
-            fecha_fin, 
-            responsable, 
+        const {
+            titulo,
+            estado,
+            obraId,
+            prioridad,
+            fecha_inicio,
+            fecha_fin,
+            responsable,
             unidad,
             cantidad_total
         } = req.body;
@@ -94,22 +81,17 @@ export const createTask = async (req, res, next) => {
         }
 
         if (!cantidad_total || cantidad_total <= 0) {
-  return res.status(400).json({ message: 'Cantidad total inválida' });
-}
-
+            const error = new Error('Cantidad total inválida');
+            error.status = 400;
+            return next(error);
+        }
 
         const result = await pool.query(
             `INSERT INTO tasks (
-                titulo, 
-                estado, 
-                obra_id, 
-                prioridad, 
-                fecha_inicio, 
-                fecha_fin, 
-                responsable, 
-                unidad,
-                cantidad_total
-            ) 
+                titulo, estado, obra_id, prioridad,
+                fecha_inicio, fecha_fin, responsable,
+                unidad, cantidad_total
+            )
             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
             RETURNING *`,
             [
@@ -132,14 +114,14 @@ export const createTask = async (req, res, next) => {
     }
 };
 
-
-// @desc Update task
-// @route PUT api/tasks/:id
-
 export const updateTask = async (req, res, next) => {
     try {
         const id = Number(req.params.id);
-        const { titulo, estado, obraId, prioridad, fecha_inicio, fecha_fin, responsable, unidad, cantidad_total } = req.body;
+        const {
+            titulo, estado, obraId, prioridad,
+            fecha_inicio, fecha_fin, responsable,
+            unidad, cantidad_total
+        } = req.body;
 
         if (!titulo) {
             const error = new Error('Falta título');
@@ -161,18 +143,13 @@ export const updateTask = async (req, res, next) => {
 
         const result = await pool.query(
             `UPDATE tasks
-             SET titulo = $1,
-                 estado = $2,
-                 obra_id = $3,
-                 prioridad = $4,
-                 fecha_inicio = $5,
-                 fecha_fin = $6,
-                 responsable = $7,
-                 unidad = $8,
-                 cantidad_total = $9
+             SET titulo = $1, estado = $2, obra_id = $3,
+                 prioridad = $4, fecha_inicio = $5, fecha_fin = $6,
+                 responsable = $7, unidad = $8, cantidad_total = $9
              WHERE id = $10
              RETURNING *`,
-            [titulo, estado, obraId, prioridad, fecha_inicio, fecha_fin, responsable, unidad, cantidad_total ?? 0, id]
+            [titulo, estado, obraId, prioridad, fecha_inicio, fecha_fin,
+             responsable, unidad, cantidad_total ?? 0, id]
         );
 
         if (result.rows.length === 0) {
@@ -187,11 +164,6 @@ export const updateTask = async (req, res, next) => {
         next(error);
     }
 };
-
-
-
-// @desc Delete task
-// @route DELETE api/tasks/:id
 
 export const deleteTask = async (req, res, next) => {
     try {
@@ -215,7 +187,6 @@ export const deleteTask = async (req, res, next) => {
     }
 };
 
-//Endpoint by obra/tasks
 export const getTasksByObra = async (req, res, next) => {
   try {
     const obraId = Number(req.params.id);
@@ -232,21 +203,16 @@ export const getTasksByObra = async (req, res, next) => {
   }
 };
 
-
-//avance por tarea
-
 export const getProgresoTask = async (req, res, next) => {
     try {
         const taskId = Number(req.params.id);
 
         const result = await pool.query(`
-            SELECT 
-                t.id,
-                t.titulo,
-                t.unidad,
+            SELECT
+                t.id, t.titulo, t.unidad,
                 COALESCE(t.cantidad_total,0) AS cantidad_total,
                 COALESCE(SUM(m.cantidad),0) AS ejecutado,
-                CASE 
+                CASE
                     WHEN COALESCE(t.cantidad_total,0) = 0 THEN 0
                     ELSE COALESCE(SUM(m.cantidad),0) * 100.0 / COALESCE(t.cantidad_total,1)
                 END AS progreso
@@ -263,14 +229,9 @@ export const getProgresoTask = async (req, res, next) => {
         res.json(result.rows[0]);
 
     } catch (error) {
-        console.error(error); // 🔥 importante
         next(error);
     }
 };
-
-
-
-// Post mediciones
 
 export const addMedicion = async (req, res, next) => {
     try {
@@ -283,8 +244,6 @@ export const addMedicion = async (req, res, next) => {
             return next(error);
         }
 
-        // 🔥 VALIDACIÓN: no pasarse del total
-
         const totalRes = await pool.query(
             'SELECT cantidad_total FROM tasks WHERE id = $1',
             [taskId]
@@ -296,7 +255,7 @@ export const addMedicion = async (req, res, next) => {
         );
 
         const total = totalRes.rows[0]?.cantidad_total || 0;
-        const ejecutado = ejecutadoRes.rows[0]?.total || 0;
+        const ejecutado = Number(ejecutadoRes.rows[0]?.total) || 0;
 
         if (total > 0 && (ejecutado + cantidad > total)) {
             const error = new Error('Supera la cantidad total de la tarea');
@@ -304,7 +263,6 @@ export const addMedicion = async (req, res, next) => {
             return next(error);
         }
 
-        // ✅ INSERT
         const result = await pool.query(
             `INSERT INTO mediciones (task_id, cantidad, observaciones)
              VALUES ($1, $2, $3)
@@ -318,37 +276,6 @@ export const addMedicion = async (req, res, next) => {
         next(error);
     }
 };
-
-
-//avance progress bar
-
-export const getTasksWithProgreso = async (req, res, next) => {
-    try {
-        const obraId = Number(req.params.id);
-
-        const result = await pool.query(`
-            SELECT 
-                t.*,
-                COALESCE(SUM(m.cantidad), 0) AS ejecutado,
-                CASE 
-                    WHEN t.cantidad_total = 0 THEN 0
-                    ELSE COALESCE(SUM(m.cantidad), 0) * 100.0 / t.cantidad_total
-                END AS progreso
-            FROM tasks t
-            LEFT JOIN mediciones m ON t.id = m.task_id
-            WHERE t.obra_id = $1
-            GROUP BY t.id
-        `, [obraId]);
-
-        res.json(result.rows);
-
-    } catch (error) {
-        next(error);
-    }
-};
-
-
-//GET mediciones
 
 export const getMediciones = async (req, res, next) => {
     try {

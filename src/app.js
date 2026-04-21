@@ -1,5 +1,6 @@
 import express from 'express';
-import path from 'path'; 
+import cors from 'cors';
+import path from 'path';
 import obrasRoutes from './routes_crud/obras.js';
 import tasksRoutes from './routes_crud/tasks.js';
 import logger from './middleware/logger.js';
@@ -8,13 +9,14 @@ import notFound from './middleware/notFound.js';
 
 const app = express();
 
-
-//body parser middleware
-
+// body parser middleware
 app.use(express.json());
-app.use(express.urlencoded({extended: false}));
+app.use(express.urlencoded({ extended: false }));
 
-//Logger middleware
+// CORS — necesario para el frontend React
+app.use(cors());
+app.use(cors({ origin: 'http://localhost:5173' }));
+// logger
 app.use(logger);
 app.use(express.static(path.join(process.cwd(), 'public')));
 
@@ -22,12 +24,10 @@ app.use(express.static(path.join(process.cwd(), 'public')));
 app.use('/api/obras', obrasRoutes);
 app.use('/api/tasks', tasksRoutes);
 
-
-//404
+// 404
 app.use(notFound);
 
-//Error Handler
-
+// error handler
 app.use(errorHandler);
 
 export default app;
