@@ -6,56 +6,63 @@
 <style>
   body { font-family: monospace; background: #0f1117; color: #e8e9ef; padding: 24px; }
   h2 { color: #4f8ef7; margin: 24px 0 8px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; }
-  button { background: #252730; border: 1px solid #333; color: #e8e9ef; padding: 6px 14px; margin: 4px; cursor: pointer; border-radius: 4px; font-family: monospace; font-size: 13px; }
+  button { background: #252730; border: 1px solid #333; color: #e8e9ef; padding: 6px 14px; margin: 4px; cursor: pointer; border-radius: 4px; }
   button:hover { background: #1e2028; }
-  pre { background: #161820; border: 1px solid #252730; padding: 14px; border-radius: 6px; font-size: 12px; white-space: pre-wrap; word-break: break-all; min-height: 40px; margin-top: 8px; color: #3ecf8e; }
+  pre { background: #161820; border: 1px solid #252730; padding: 14px; border-radius: 6px; font-size: 12px; min-height: 40px; margin-top: 8px; }
   .err { color: #f26d6d; }
-  input { background: #1e2028; border: 1px solid #333; color: #e8e9ef; padding: 6px 10px; border-radius: 4px; font-family: monospace; font-size: 13px; width: 60px; }
-  label { font-size: 12px; color: #8b8d9a; margin-right: 6px; }
+  input, select { background: #1e2028; border: 1px solid #333; color: #e8e9ef; padding: 6px; border-radius: 4px; }
 </style>
 </head>
 <body>
 
-<h1 style="font-size:18px;margin-bottom:4px">gestor_de_obras — API Tester</h1>
-<p style="color:#55576a;font-size:12px">Cada botón hace un fetch real y muestra la respuesta</p>
+<h1>gestor_de_obras — API Tester</h1>
 
+<!-- OBRAS -->
 <h2>Obras</h2>
 <button onclick="go('GET', '/api/obras')">GET /api/obras</button>
-<button onclick="go('POST', '/api/obras', {nombre:'Obra test',direccion:'Calle falsa 123',estado:'planificada',fecha_inicio:'2025-01-01',fecha_fin:'2025-12-31'})">POST /api/obras (test)</button>
-<label style="margin-left:12px">id:</label><input id="obra-id" value="1" />
-<button onclick="go('GET', '/api/obras/'+document.getElementById('obra-id').value)">GET /api/obras/:id</button>
-<button onclick="go('GET', '/api/obras/'+document.getElementById('obra-id').value+'/progreso')">GET /api/obras/:id/progreso</button>
-<button onclick="go('GET', '/api/obras/'+document.getElementById('obra-id').value+'/tasks')">GET /api/obras/:id/tasks</button>
-<button onclick="go('DELETE', '/api/obras/'+document.getElementById('obra-id').value)">DELETE /api/obras/:id</button>
+<button onclick="crearObra()">POST obra</button>
+
+<label>Obra:</label>
+<select id="obra-id"></select>
+
+<button onclick="go('GET', '/api/obras/'+val('obra-id'))">GET obra</button>
+<button onclick="go('GET', '/api/obras/'+val('obra-id')+'/tasks')">GET tareas obra</button>
+
 <pre id="out-obras">—</pre>
 
-<h2>Tasks</h2>
+<!-- TASKS -->
+<h2>Tareas</h2>
 <button onclick="go('GET', '/api/tasks')">GET /api/tasks</button>
-<button onclick="go('POST', '/api/tasks', {titulo:'Tarea test',estado:'pendiente',obraId:Number(document.getElementById('obra-id').value),prioridad:'media',unidad:'m2',cantidad_total:100})">POST /api/tasks (test)</button>
-<label style="margin-left:12px">id:</label><input id="task-id" value="1" />
-<button onclick="go('GET', '/api/tasks/'+document.getElementById('task-id').value)">GET /api/tasks/:id</button>
-<button onclick="go('GET', '/api/tasks/'+document.getElementById('task-id').value+'/progreso')">GET /api/tasks/:id/progreso</button>
-<button onclick="go('DELETE', '/api/tasks/'+document.getElementById('task-id').value)">DELETE /api/tasks/:id</button>
+<button onclick="crearTarea()">POST tarea</button>
+
+<label>Task ID:</label>
+<input id="task-id" value="1" />
+
+<button onclick="go('GET', '/api/tasks/'+val('task-id'))">GET task</button>
+<button onclick="go('GET', '/api/tasks/'+val('task-id')+'/progreso')">Progreso</button>
+
 <pre id="out-tasks">—</pre>
 
+<!-- MEDICIONES -->
 <h2>Mediciones</h2>
-<label>task id:</label><input id="med-task-id" value="1" />
-<button onclick="go('GET', '/api/tasks/'+document.getElementById('med-task-id').value+'/mediciones')">GET mediciones</button>
-<button onclick="go('POST', '/api/tasks/'+document.getElementById('med-task-id').value+'/mediciones', {cantidad:10,observaciones:'test'})">POST medición (10)</button>
+<label>Task:</label>
+<input id="med-task-id" value="1" />
+
+<button onclick="go('GET', '/api/tasks/'+val('med-task-id')+'/mediciones')">GET mediciones</button>
+<button onclick="crearMedicion()">POST medición</button>
+
 <pre id="out-mediciones">—</pre>
 
 <script>
 const API = 'http://localhost:8000';
 
-const outMap = {
-  '/api/obras': 'out-obras',
-  '/api/tasks': 'out-tasks',
-  'mediciones': 'out-mediciones',
-};
+function val(id) {
+  return document.getElementById(id).value;
+}
 
-function getOut(url) {
-  if (url.includes('mediciones')) return document.getElementById('out-mediciones');
-  if (url.includes('/tasks')) return document.getElementById('out-tasks');
+function getOut(path) {
+  if (path.includes('mediciones')) return document.getElementById('out-mediciones');
+  if (path.includes('/tasks')) return document.getElementById('out-tasks');
   return document.getElementById('out-obras');
 }
 
@@ -63,18 +70,100 @@ async function go(method, path, body) {
   const out = getOut(path);
   out.textContent = 'cargando…';
   out.className = '';
+
   try {
-    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    const opts = {
+      method,
+      headers: { 'Content-Type': 'application/json' }
+    };
+
     if (body) opts.body = JSON.stringify(body);
+
     const r = await fetch(API + path, opts);
     const data = await r.json();
+
     out.textContent = JSON.stringify(data, null, 2);
     if (!r.ok) out.className = 'err';
-  } catch(e) {
+
+  } catch (e) {
     out.textContent = '❌ ' + e.message;
     out.className = 'err';
   }
 }
+
+/////////////////////////
+// CARGAR OBRAS
+/////////////////////////
+
+async function cargarObras() {
+  try {
+    const res = await fetch(API + '/api/obras');
+    const obras = await res.json();
+
+    const select = document.getElementById('obra-id');
+    select.innerHTML = '';
+
+    obras.forEach(o => {
+      const opt = document.createElement('option');
+      opt.value = o.id;
+      opt.textContent = `${o.id} - ${o.nombre}`;
+      select.appendChild(opt);
+    });
+
+  } catch (e) {
+    console.error('Error cargando obras:', e);
+  }
+}
+
+/////////////////////////
+// CREAR OBRA
+/////////////////////////
+
+function crearObra() {
+  go('POST', '/api/obras', {
+    nombre: 'Obra ' + Date.now(),
+    direccion: 'Test',
+    estado: 'planificada',
+    fecha_inicio: '2026-01-01',
+    fecha_fin: '2026-12-31'
+  }).then(cargarObras);
+}
+
+/////////////////////////
+// CREAR TAREA
+/////////////////////////
+
+function crearTarea() {
+  const obraId = Number(val('obra-id'));
+
+  go('POST', '/api/tasks', {
+    titulo: 'Tarea ' + Date.now(),
+    estado: 'pendiente',
+    obraId: obraId,
+    prioridad: 'media',
+    unidad: 'm2',
+    cantidad_total: 100
+  });
+}
+
+/////////////////////////
+// CREAR MEDICION
+/////////////////////////
+
+function crearMedicion() {
+  const taskId = val('med-task-id');
+
+  go('POST', `/api/tasks/${taskId}/mediciones`, {
+    cantidad: 10,
+    observaciones: 'test'
+  });
+}
+
+/////////////////////////
+
+cargarObras();
+
 </script>
+
 </body>
 </html>
