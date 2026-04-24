@@ -1,26 +1,25 @@
 const API = "http://localhost:8000/api";
 
-export const getTasks = async () => {
-  const res = await fetch(`${API}/tasks`);
-  return res.json();
-};
+// OBRAS
+export const getObras = () => fetch(`${API}/obras`).then(r => r.json());
+export const getObraById = (id) => fetch(`${API}/obras/${id}`).then(r => r.json());
+export const createObra = (data) => fetch(`${API}/obras`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) }).then(r => r.json());
+export const updateObra = (id, data) => fetch(`${API}/obras/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) }).then(r => r.json());
+export const deleteObra = (id) => fetch(`${API}/obras/${id}`, { method: "DELETE" }).then(r => r.json());
+export const getProgresoObra = (id) => fetch(`${API}/obras/${id}/progreso`).then(r => r.json());
+export const getTasksConProgreso = (obraId) => fetch(`${API}/obras/${obraId}/tasks`).then(r => r.json());
 
-export const getProgreso = async (id) => {
-  const res = await fetch(`${API}/tasks/${id}/progreso`);
-  return res.json();
+// TASKS
+export const getTasks = (params = {}) => {
+  const qs = new URLSearchParams(params).toString();
+  return fetch(`${API}/tasks${qs ? "?" + qs : ""}`).then(r => r.json());
 };
+export const getTask = (id) => fetch(`${API}/tasks/${id}`).then(r => r.json());
+export const createTask = (data) => fetch(`${API}/tasks`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) }).then(r => r.json());
+export const updateTask = (id, data) => fetch(`${API}/tasks/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) }).then(r => r.json());
+export const deleteTask = (id) => fetch(`${API}/tasks/${id}`, { method: "DELETE" }).then(r => r.json());
+export const getProgresoTask = (id) => fetch(`${API}/tasks/${id}/progreso`).then(r => r.json());
 
-export const getMediciones = async (id) => {
-  const res = await fetch(`${API}/tasks/${id}/mediciones`);
-  return res.json();
-};
-
-export const addMedicion = async (id, data) => {
-  const res = await fetch(`${API}/tasks/${id}/mediciones`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  return res.json();
-};
-
+// MEDICIONES
+export const getMediciones = (taskId) => fetch(`${API}/tasks/${taskId}/mediciones`).then(r => r.json());
+export const addMedicion = (taskId, data) => fetch(`${API}/tasks/${taskId}/mediciones`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) }).then(r => r.json());
