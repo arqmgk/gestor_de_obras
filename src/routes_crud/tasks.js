@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { authenticate } from '../middleware/authenticate.js';
 import {
     getTasks,
     getTask,
@@ -11,6 +12,9 @@ import {
 } from '../controllers/tasksControllers.js';
 
 const router = Router();
+
+// Todas las rutas requieren token
+router.use(authenticate);
 
 // MEDICIONES (antes que :id)
 router.get('/:id/mediciones', getMediciones);

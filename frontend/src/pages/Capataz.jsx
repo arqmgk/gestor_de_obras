@@ -45,7 +45,7 @@ export default function Capataz() {
 
       {/* PANEL IZQUIERDO */}
       <div style={{ flex: "1", minWidth: "260px" }}>
-        <h2 style={{ color: "#fff", marginBottom: "12px" }}>Mis tareas</h2>
+        <p style={sectionTitle}>Mis tareas</p>
 
         <select value={obraId} onChange={e => seleccionarObra(e.target.value)}
           style={{ ...iS, width: "100%", marginBottom: "16px" }}>
@@ -53,19 +53,19 @@ export default function Capataz() {
           {obras.map(o => <option key={o.id} value={o.id}>{o.nombre}</option>)}
         </select>
 
-        {loading && <p style={{ color: "#666" }}>Cargando...</p>}
-        {!loading && obraId && tasks.length === 0 && <p style={{ color: "#666" }}>Esta obra no tiene tareas.</p>}
+        {loading && <p style={dimTxt}>Cargando...</p>}
+        {!loading && obraId && tasks.length === 0 && <p style={dimTxt}>Esta obra no tiene tareas.</p>}
 
         {tasks.map(t => (
           <div key={t.id} onClick={() => seleccionarTask(t)}
-            style={{ ...cardStyle, cursor: "pointer", border: taskSeleccionada?.id === t.id ? "1px solid #2563eb" : "1px solid #333" }}>
-            <strong style={{ color: "#fff" }}>{t.titulo}</strong>
-            <p style={{ color: "#888", margin: "2px 0 6px", fontSize: "12px" }}>
+            style={{ ...card, cursor: "pointer", borderColor: taskSeleccionada?.id === t.id ? "#2563eb" : "#222" }}>
+            <strong style={{ color: "#e0e0e0", fontSize: "14px" }}>{t.titulo}</strong>
+            <p style={{ color: "#555", margin: "2px 0 6px", fontSize: "12px" }}>
               {t.unidad} · {t.estado}
               {t.responsable && <span> · 👤 {t.responsable}</span>}
             </p>
             <ProgresoBar progreso={t.progreso} />
-            <small style={{ color: "#666" }}>
+            <small style={{ color: "#444", fontSize: "11px" }}>
               {Number(t.ejecutado).toFixed(2)} / {Number(t.cantidad_total).toFixed(2)} {t.unidad}
             </small>
           </div>
@@ -76,32 +76,32 @@ export default function Capataz() {
       <div style={{ flex: "2", minWidth: "300px" }}>
         {taskSeleccionada ? (
           <>
-            <h2 style={{ color: "#fff", margin: "0 0 4px" }}>{taskSeleccionada.titulo}</h2>
-            <p style={{ color: "#888", margin: "0 0 12px", fontSize: "13px" }}>
-              Progreso: <strong style={{ color: "#fff" }}>{pct(taskSeleccionada.progreso)}%</strong>
+            <p style={sectionTitle}>{taskSeleccionada.titulo}</p>
+            <p style={{ color: "#555", margin: "0 0 12px", fontSize: "12px" }}>
+              Progreso: <strong style={{ color: "#e0e0e0" }}>{pct(taskSeleccionada.progreso)}%</strong>
               {taskSeleccionada.unidad && <span> · {taskSeleccionada.unidad}</span>}
             </p>
 
             <MedicionForm task={taskSeleccionada} onSuccess={onMedicionGuardada} />
 
-            <h3 style={{ color: "#ccc", margin: "20px 0 8px" }}>Historial</h3>
-            {mediciones.length === 0 && <p style={{ color: "#666" }}>Sin mediciones registradas.</p>}
+            <p style={{ ...sectionTitle, marginTop: "24px", marginBottom: "10px", fontSize: "12px" }}>Historial</p>
+            {mediciones.length === 0 && <p style={dimTxt}>Sin mediciones registradas.</p>}
             {mediciones.length > 0 && (
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
                 <thead>
                   <tr>
                     {["Fecha", "Cantidad", "Acumulado", "Observaciones"].map(h => (
-                      <th key={h} style={{ textAlign: "left", color: "#888", padding: "4px 8px", borderBottom: "1px solid #333" }}>{h}</th>
+                      <th key={h} style={{ textAlign: "left", color: "#444", padding: "4px 8px", borderBottom: "1px solid #1e1e1e", fontWeight: "500", textTransform: "uppercase", letterSpacing: "0.06em", fontSize: "11px" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {mediciones.map(m => (
-                    <tr key={m.id} style={{ borderBottom: "1px solid #222" }}>
-                      <td style={tdS}>{new Date(m.fecha).toLocaleDateString("es-AR")}</td>
-                      <td style={tdS}>{Number(m.cantidad).toFixed(2)}</td>
-                      <td style={tdS}>{Number(m.acumulado).toFixed(2)}</td>
-                      <td style={{ ...tdS, color: "#888" }}>{m.observaciones || "—"}</td>
+                    <tr key={m.id} style={{ borderBottom: "1px solid #161616" }}>
+                      <td style={td}>{new Date(m.fecha).toLocaleDateString("es-AR")}</td>
+                      <td style={td}>{Number(m.cantidad).toFixed(2)}</td>
+                      <td style={td}>{Number(m.acumulado).toFixed(2)}</td>
+                      <td style={{ ...td, color: "#444" }}>{m.observaciones || "—"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -109,7 +109,7 @@ export default function Capataz() {
             )}
           </>
         ) : (
-          <p style={{ color: "#555", marginTop: "40px", textAlign: "center" }}>
+          <p style={{ color: "#2a2a2a", marginTop: "60px", textAlign: "center", fontSize: "13px" }}>
             {obraId ? "Seleccioná una tarea para registrar mediciones." : "Primero seleccioná una obra."}
           </p>
         )}
@@ -118,6 +118,8 @@ export default function Capataz() {
   );
 }
 
-const cardStyle = { background: "#1a1a1a", borderRadius: "8px", padding: "12px", marginBottom: "10px", border: "1px solid #333" };
-const iS = { background: "#2c2c2c", border: "1px solid #444", borderRadius: "4px", color: "#fff", padding: "8px 10px" };
-const tdS = { color: "#ccc", padding: "6px 8px" };
+const sectionTitle = { color: "#e0e0e0", fontSize: "14px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 12px" };
+const card = { background: "#111", borderRadius: "6px", padding: "12px", marginBottom: "8px", border: "1px solid #222" };
+const iS = { background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: "4px", color: "#e0e0e0", padding: "8px 10px", fontSize: "13px" };
+const dimTxt = { color: "#333", fontSize: "13px" };
+const td = { color: "#888", padding: "6px 8px" };

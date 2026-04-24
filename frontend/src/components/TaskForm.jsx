@@ -1,7 +1,11 @@
 import { useState, useEffect } from "react";
 import { createTask, updateTask } from "../api/api";
 
-const EMPTY = { titulo: "", estado: "pendiente", prioridad: "media", unidad: "", cantidad_total: "", responsable: "", fecha_inicio: "", fecha_fin: "" };
+const EMPTY = {
+  titulo: "", estado: "pendiente", prioridad: "media",
+  unidad: "", cantidad_total: "", responsable: "",
+  fecha_inicio: "", fecha_fin: "",
+};
 
 export default function TaskForm({ obraId, task, onSuccess, onCancel }) {
   const [form, setForm] = useState(EMPTY);
@@ -46,46 +50,50 @@ export default function TaskForm({ obraId, task, onSuccess, onCancel }) {
   };
 
   return (
-    <div style={{ background: "#1a1a1a", border: "1px solid #333", borderRadius: "8px", padding: "16px", marginBottom: "12px" }}>
-      <h3 style={{ color: "#fff", margin: "0 0 16px" }}>{task ? "Editar tarea" : "Nueva tarea"}</h3>
+    <div style={cardStyle}>
+      <h3 style={{ color: "#e0e0e0", margin: "0 0 16px", fontSize: "14px", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+        {task ? "Editar tarea" : "Nueva tarea"}
+      </h3>
 
-      {/* Título */}
-      <label style={labelStyle}>Título *</label>
+      <label style={lbl}>Título *</label>
       <input value={form.titulo} onChange={e => set("titulo", e.target.value)}
-        placeholder="Ej: Mampostería planta baja" style={{ ...iS, width: "100%", marginBottom: "12px", boxSizing: "border-box" }} />
+        placeholder="Ej: Mampostería planta baja"
+        style={{ ...iS, width: "100%", marginBottom: "12px", boxSizing: "border-box" }} />
 
-      {/* Unidad + Cantidad */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
+      <div style={grid2}>
         <div>
-          <label style={labelStyle}>Unidad *</label>
+          <label style={lbl}>Unidad *</label>
           <input value={form.unidad} onChange={e => set("unidad", e.target.value)}
-            placeholder="Ej: m², ml, kg" style={{ ...iS, width: "100%", boxSizing: "border-box" }} />
+            placeholder="m², ml, kg…"
+            style={{ ...iS, width: "100%", boxSizing: "border-box" }} />
         </div>
         <div>
-          <label style={labelStyle}>Cantidad total *</label>
+          <label style={lbl}>Cantidad total *</label>
           <input type="number" value={form.cantidad_total} onChange={e => set("cantidad_total", e.target.value)}
-            placeholder="Ej: 150" min="0" step="any" style={{ ...iS, width: "100%", boxSizing: "border-box" }} />
+            placeholder="150" min="0" step="any"
+            style={{ ...iS, width: "100%", boxSizing: "border-box" }} />
         </div>
       </div>
 
-      {/* Responsable */}
-      <label style={labelStyle}>Responsable</label>
+      <label style={{ ...lbl, marginTop: "12px" }}>Responsable</label>
       <input value={form.responsable} onChange={e => set("responsable", e.target.value)}
-        placeholder="Nombre del responsable" style={{ ...iS, width: "100%", marginBottom: "12px", boxSizing: "border-box" }} />
+        placeholder="Nombre del responsable"
+        style={{ ...iS, width: "100%", marginBottom: "12px", boxSizing: "border-box" }} />
 
-      {/* Estado + Prioridad */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
+      <div style={grid2}>
         <div>
-          <label style={labelStyle}>Estado</label>
-          <select value={form.estado} onChange={e => set("estado", e.target.value)} style={{ ...iS, width: "100%", boxSizing: "border-box" }}>
+          <label style={lbl}>Estado</label>
+          <select value={form.estado} onChange={e => set("estado", e.target.value)}
+            style={{ ...iS, width: "100%", boxSizing: "border-box" }}>
             <option value="pendiente">Pendiente</option>
             <option value="en_progreso">En progreso</option>
             <option value="finalizada">Finalizada</option>
           </select>
         </div>
         <div>
-          <label style={labelStyle}>Prioridad</label>
-          <select value={form.prioridad} onChange={e => set("prioridad", e.target.value)} style={{ ...iS, width: "100%", boxSizing: "border-box" }}>
+          <label style={lbl}>Prioridad</label>
+          <select value={form.prioridad} onChange={e => set("prioridad", e.target.value)}
+            style={{ ...iS, width: "100%", boxSizing: "border-box" }}>
             <option value="baja">Baja</option>
             <option value="media">Media</option>
             <option value="alta">Alta</option>
@@ -93,33 +101,34 @@ export default function TaskForm({ obraId, task, onSuccess, onCancel }) {
         </div>
       </div>
 
-      {/* Fechas */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
+      <div style={{ ...grid2, marginTop: "12px", marginBottom: "16px" }}>
         <div>
-          <label style={labelStyle}>Fecha de inicio <span style={{ color: "#555" }}>(opcional)</span></label>
+          <label style={lbl}>Inicio <span style={{ color: "#444" }}>(opc.)</span></label>
           <input type="date" value={form.fecha_inicio} onChange={e => set("fecha_inicio", e.target.value)}
             style={{ ...iS, width: "100%", boxSizing: "border-box" }} />
         </div>
         <div>
-          <label style={labelStyle}>Fecha de fin <span style={{ color: "#555" }}>(opcional)</span></label>
+          <label style={lbl}>Fin <span style={{ color: "#444" }}>(opc.)</span></label>
           <input type="date" value={form.fecha_fin} onChange={e => set("fecha_fin", e.target.value)}
             style={{ ...iS, width: "100%", boxSizing: "border-box" }} />
         </div>
       </div>
 
-      {error && <p style={{ color: "#e74c3c", fontSize: "13px", margin: "0 0 12px" }}>{error}</p>}
+      {error && <p style={{ color: "#e74c3c", fontSize: "12px", margin: "0 0 12px" }}>{error}</p>}
 
       <div style={{ display: "flex", gap: "8px" }}>
-        <button onClick={handleSubmit} disabled={loading} style={btnPrimary}>
+        <button onClick={handleSubmit} disabled={loading} style={btnP}>
           {loading ? "..." : task ? "Guardar cambios" : "Crear tarea"}
         </button>
-        <button onClick={onCancel} style={btnSecondary}>Cancelar</button>
+        <button onClick={onCancel} style={btnS}>Cancelar</button>
       </div>
     </div>
   );
 }
 
-const labelStyle = { display: "block", color: "#888", fontSize: "12px", marginBottom: "4px" };
-const iS = { background: "#2c2c2c", border: "1px solid #444", borderRadius: "4px", color: "#fff", padding: "7px 10px" };
-const btnPrimary = { background: "#2563eb", border: "none", borderRadius: "4px", color: "#fff", cursor: "pointer", padding: "8px 18px", fontWeight: "600" };
-const btnSecondary = { background: "#333", border: "none", borderRadius: "4px", color: "#aaa", cursor: "pointer", padding: "8px 14px" };
+const cardStyle = { background: "#141414", border: "1px solid #2a2a2a", borderRadius: "6px", padding: "16px", marginBottom: "12px" };
+const lbl = { display: "block", color: "#666", fontSize: "11px", marginBottom: "4px", textTransform: "uppercase", letterSpacing: "0.06em" };
+const iS = { background: "#1e1e1e", border: "1px solid #333", borderRadius: "4px", color: "#e0e0e0", padding: "7px 10px", fontSize: "13px" };
+const grid2 = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" };
+const btnP = { background: "#2563eb", border: "none", borderRadius: "4px", color: "#fff", cursor: "pointer", padding: "8px 18px", fontWeight: "600", fontSize: "13px" };
+const btnS = { background: "#222", border: "1px solid #333", borderRadius: "4px", color: "#888", cursor: "pointer", padding: "8px 14px", fontSize: "13px" };
