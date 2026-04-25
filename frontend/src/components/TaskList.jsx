@@ -2,27 +2,17 @@ import { useEffect, useState } from "react";
 import { getTasks, getProgreso } from "../api/api";
 import ProgresoBar from "./ProgresoBar";
 
-export default function TaskList({ onSelect }) {
+export default function TaskList({ obraId, onSelect }) {
   const [tasks, setTasks] = useState([]);
 
   useEffect(() => {
     const load = async () => {
-      const data = await getTasks();
-console.log(data);
-
-      const withProgress = await Promise.all(
-        data.map(async (t) => {
-          const prog = await getProgreso(t.id);
-          return { ...t, progreso: prog.progreso };
-        })
-      );
-
-      setTasks(withProgress);
+      const data = await getTasksWithProgreso(obraId);
+      setTasks(data);
     };
 
-
     load();
-  }, []);
+  }, [obraId]);
 
   return (
     <div>

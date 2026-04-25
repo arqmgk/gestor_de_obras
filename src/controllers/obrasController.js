@@ -111,29 +111,56 @@ export const updateObra = async (req, res, next) => {
 };
 
 // PROGRESO OBRA
+// PROGRESO OBRA
 export const getProgresoObra = async (req, res, next) => {
   try {
     const obraId = Number(req.params.id);
 
-    const result = await pool.query(`
+    const general = await pool.query(`
       SELECT
-        COALESCE(SUM(t.cantidad_total),0) AS total,
-        COALESCE(SUM(m.cantidad),0) AS ejecutado,
+        COALESCE(SUM(t.cantidad_total),0)::float AS total,
+        COALESCE(SUM(m.cantidad),0)::float AS ejecutado,
         CASE
           WHEN COALESCE(SUM(t.cantidad_total),0) = 0 THEN 0
-          ELSE COALESCE(SUM(m.cantidad),0) * 100.0 / SUM(t.cantidad_total)
+          ELSE ROUND(
+            (COALESCE(SUM(m.cantidad),0) * 100.0 / SUM(t.cantidad_total))::numeric,
+            2
+          )
         END AS progreso
       FROM tasks t
       LEFT JOIN mediciones m ON t.id = m.task_id
       WHERE t.obra_id = $1
     `, [obraId]);
 
-    res.json(result.rows[0]);
+    const porUnidad = await pool.query(`
+      SELECT
+        t.unidad,
+        COALESCE(SUM(t.cantidad_total),0)::float AS total,
+        COALESCE(SUM(m.cantidad),0)::float AS ejecutado,
+        CASE
+          WHEN COALESCE(SUM(t.cantidad_total),0) = 0 THEN 0
+          ELSE ROUND(
+            (COALESCE(SUM(m.cantidad),0) * 100.0 / SUM(t.cantidad_total))::numeric,
+            2
+          )
+        END AS progreso
+      FROM tasks t
+      LEFT JOIN mediciones m ON t.id = m.task_id
+      WHERE t.obra_id = $1
+      GROUP BY t.unidad
+    `, [obraId]);
+
+    res.json({
+      general: general.rows[0],
+      unidades: porUnidad.rows
+    });
 
   } catch (error) {
     next(error);
   }
 };
+
+
 
 // TASKS CON PROGRESO
 export const getTasksWithProgreso = async (req, res, next) => {
