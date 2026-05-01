@@ -3,7 +3,7 @@ import {
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer
 } from "recharts";
-import { getFlujoPorMes } from "../api/api";
+import { getFlujoPorMes } from "../../api/api";
 
 const fmt = (n) => {
   if (!n && n !== 0) return "—";

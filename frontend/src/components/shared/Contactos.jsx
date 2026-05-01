@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getContactos, addContacto, deleteContacto } from "../api/api";
+import { getContactos, addContacto, deleteContacto } from "../../api/api.js";
 
 const ROLES_EMERGENCIA = [
   "ART", "Hospital / Guardia", "SAME / Emergencias",

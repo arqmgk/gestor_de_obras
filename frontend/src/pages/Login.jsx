@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { login, register } from "../api/api";
+import { login } from "../api/api.js";
 
 export default function Login({ onLogin }) {
   const [modo, setModo] = useState("login");

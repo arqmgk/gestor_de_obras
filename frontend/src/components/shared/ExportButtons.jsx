@@ -3,7 +3,7 @@ import {
   exportarTareasExcel,
   exportarFlujoCSV,
   exportPDFObra,
-} from "../utils/exportar";
+} from "../../utils/exportar";
 
 // Props:
 //   tasks        — array de tareas con progreso

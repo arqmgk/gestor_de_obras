@@ -1,4 +1,4 @@
-import { NIVEL_COLOR } from "../utils/desvios";
+import { NIVEL_COLOR } from "../../utils/desvios";
 
 const fmt = (n) => Number(n || 0).toLocaleString("es-AR", { minimumFractionDigits: 0 });
 

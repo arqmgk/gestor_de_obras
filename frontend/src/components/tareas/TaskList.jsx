@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getTasks, getProgreso } from "../api/api";
+import { getTasks, getProgreso } from "../../api/api";
 import ProgresoBar from "./ProgresoBar";
 
 export default function TaskList({ obraId, onSelect }) {

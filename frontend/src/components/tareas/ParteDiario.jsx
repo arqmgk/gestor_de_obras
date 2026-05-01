@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getParte, addPersona, deletePersona, updateParte } from "../api/api";
+import { getParte, addPersona, deletePersona, updateParte } from "../../api/api.js";
 
 const ROLES = [
   "Albañil", "Oficial albañil", "Medio oficial",

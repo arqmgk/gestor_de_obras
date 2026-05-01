@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { subirFoto, getFotos, deleteFoto } from "../api/api";
+import { subirFoto, getFotos, deleteFoto } from "../../api/api.js";
 
 export default function FotoUploader({ task, fotos = [], onFotosChange, readonly = false }) {
   const inputRef              = useRef(null);

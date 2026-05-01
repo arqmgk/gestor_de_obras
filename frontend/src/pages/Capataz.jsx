@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { addMedicion, getObras, getTasksConProgreso, getProgresoTask, getMediciones, getFotos } from "../api/api";
-import ParteDiario from "../components/ParteDiario";
-import Contactos from "../components/Contactos";
-import FotoUploader from "../components/FotoUploader";
+import ParteDiario from "../components/tareas/ParteDiario";
+import Contactos from "../components/shared/Contactos";
+import FotoUploader from "../components/tareas/FotoUploader";
 
 const PRIO = { alta: 0, media: 1, baja: 2 };
 
