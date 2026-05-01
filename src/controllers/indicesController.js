@@ -68,9 +68,27 @@ export const aplicarCoeficiente = async (req, res, next) => {
         if (!coef || coef <= 0)
             return res.status(400).json({ error: 'Coeficiente inválido' });
 
-        // Actualizar precio_unitario multiplicando por el coeficiente
-        // Solo tareas que tengan precio_unitario cargado
-        const result = await pool.query(
+        // Normalizar mes al primer día
+        let mesNorm = null;
+        if (mes) {
+            const m = new Date(mes);
+            m.setDate(1);
+            mesNorm = isNaN(m) ? null : m.toISOString().slice(0, 10);
+        }
+
+        // Obtener precios actuales ANTES de actualizar (para el log)
+        const antesRes = await pool.query(
+            `SELECT id, titulo, precio_unitario
+             FROM tasks
+             WHERE id = ANY($1::int[]) AND precio_unitario IS NOT NULL`,
+            [task_ids]
+        );
+
+        if (antesRes.rows.length === 0)
+            return res.status(400).json({ error: 'Ninguna de las tareas tiene precio unitario cargado' });
+
+        // Actualizar precio_unitario en tasks (actualización de contrato)
+        const updateRes = await pool.query(
             `UPDATE tasks
              SET precio_unitario = ROUND(precio_unitario * $1, 2)
              WHERE id = ANY($2::int[]) AND precio_unitario IS NOT NULL
@@ -78,12 +96,37 @@ export const aplicarCoeficiente = async (req, res, next) => {
             [coef, task_ids]
         );
 
+        // Registrar cada actualización en log_actualizaciones
+        const userId = req.user?.id || null;
+        const logValues = antesRes.rows.map(t => {
+            const despues = updateRes.rows.find(r => r.id === t.id);
+            return [
+                t.id,
+                Number(t.precio_unitario),
+                Number(despues?.precio_unitario ?? t.precio_unitario),
+                coef,
+                fuente || null,
+                mesNorm,
+                userId,
+            ];
+        });
+
+        // INSERT múltiple en log_actualizaciones
+        for (const vals of logValues) {
+            await pool.query(
+                `INSERT INTO log_actualizaciones
+                    (task_id, precio_antes, precio_despues, coeficiente, fuente, mes_indice, aplicado_por)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+                vals
+            );
+        }
+
         res.json({
-            actualizadas: result.rows.length,
-            tareas: result.rows,
+            actualizadas: updateRes.rows.length,
+            tareas: updateRes.rows,
             coeficiente: coef,
-            fuente,
-            mes,
+            fuente: fuente || null,
+            mes: mesNorm,
         });
     } catch (error) { next(error); }
 };

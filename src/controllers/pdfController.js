@@ -6,6 +6,11 @@ import pool from '../config/db.js';
 const fmt = (n) => Number(n || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtCant = (n) => Number(n || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
 const fmtFecha = (d) => d ? new Date(d).toLocaleDateString('es-AR') : '—';
+const fmtMes = (iso) => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('es-AR', { year: 'numeric', month: 'long' });
+};
 
 const COLORS = {
   primary:   '#1a1a2e',
@@ -137,7 +142,7 @@ function montoBox(doc, y, label, monto, color = COLORS.accent) {
 
 // ── PIE DE PÁGINA ─────────────────────────────────────────────────────────────
 
-function drawFooter(doc, firmante) {
+function drawFooter(doc, firmante, disclaimer) {
   const W = doc.page.width;
   const H = doc.page.height;
   const y = H - 80;
@@ -149,9 +154,14 @@ function drawFooter(doc, firmante) {
   doc.font('Helvetica').fontSize(8).fillColor(COLORS.muted)
      .text(firmante || 'Firma y aclaración', W - 220, y + 40, { width: 160, align: 'center' });
 
-  // Texto izquierdo
+  // Texto izquierdo: sistema + disclaimer si existe
   doc.font('Helvetica').fontSize(7).fillColor(COLORS.muted)
-     .text(`Emitido por Gestor de Obras · ${new Date().toLocaleDateString('es-AR')}`, 40, y + 40);
+     .text(`Emitido por Gestor de Obras · ${new Date().toLocaleDateString('es-AR')}`, 40, y + 36);
+
+  if (disclaimer) {
+    doc.font('Helvetica').fontSize(6.5).fillColor(COLORS.muted)
+       .text(disclaimer, 40, y + 48, { width: W - 280 });
+  }
 }
 
 // ── ENDPOINT: CERTIFICADO POR TAREA ──────────────────────────────────────────
@@ -163,7 +173,13 @@ export const generarCertificadoTask = async (req, res, next) => {
 
     // Datos del certificado
     const certRes = await pool.query(
-      `SELECT p.*, t.titulo, t.unidad, t.cantidad_total, t.precio_unitario,
+      `SELECT p.*,
+              p.precio_base::float,
+              p.indice_aplicado::float,
+              p.mes_indice,
+              p.coeficiente::float,
+              p.fuente_indice,
+              t.titulo, t.unidad, t.cantidad_total, t.precio_unitario,
               o.nombre AS obra_nombre, o.direccion AS obra_direccion,
               e.nombre AS empresa_nombre
        FROM pagos p
@@ -179,6 +195,7 @@ export const generarCertificadoTask = async (req, res, next) => {
     }
 
     const c = certRes.rows[0];
+    // fuente_indice ya viene en el row — no se necesita lookup adicional
 
     // Historial de certificados anteriores de esta tarea
     const histRes = await pool.query(
@@ -224,11 +241,27 @@ export const generarCertificadoTask = async (req, res, next) => {
 
     y = hLine(doc, y);
 
-    y = twoCol(doc, y,
-      [['Tarea', c.titulo], ['Unidad', c.unidad]],
-      [['Cantidad total', `${fmtCant(c.cantidad_total)} ${c.unidad}`],
-       ['Precio unitario', c.precio_unitario ? `$ ${fmt(c.precio_unitario)}` : '—']]
-    );
+    // Precio unitario: si hay coeficiente muestra base y actualizado en columnas separadas
+    const tieneActualizacion = c.coeficiente && c.precio_base;
+    if (tieneActualizacion) {
+      y = twoCol(doc, y,
+        [['Tarea', c.titulo], ['Unidad', c.unidad]],
+        [['Cantidad total', `${fmtCant(c.cantidad_total)} ${c.unidad}`],
+         ['Precio base (contrato)', `$ ${fmt(c.precio_base)}`]]
+      );
+      // Fila de actualización: coeficiente + precio actualizado
+      y = twoCol(doc, y,
+        [['Índice de actualización', `${c.fuente_indice || 'Índice'} · ${fmtMes(c.mes_indice)}`]],
+        [['Coeficiente aplicado', Number(c.coeficiente).toFixed(6)],
+         ['Precio actualizado', `$ ${fmt(c.precio_unitario)}`]]
+      );
+    } else {
+      y = twoCol(doc, y,
+        [['Tarea', c.titulo], ['Unidad', c.unidad]],
+        [['Cantidad total', `${fmtCant(c.cantidad_total)} ${c.unidad}`],
+         ['Precio unitario', c.precio_unitario ? `$ ${fmt(c.precio_unitario)}` : '—']]
+      );
+    }
 
     y = hLine(doc, y);
     y += 4;
@@ -237,17 +270,34 @@ export const generarCertificadoTask = async (req, res, next) => {
     doc.font('Helvetica-Bold').fontSize(9).fillColor(COLORS.text).text('DETALLE DEL CERTIFICADO', 40, y);
     y += 14;
 
-    y = drawTable(doc, y,
-      ['Descripción', 'Unidad', 'Cantidad', 'Precio Unit.', 'Monto'],
-      [[
-        c.titulo,
-        c.unidad,
-        { text: fmtCant(c.cantidad_certificada), color: COLORS.text },
-        { text: c.precio_unitario ? `$ ${fmt(c.precio_unitario)}` : '—', color: COLORS.muted },
-        { text: `$ ${fmt(c.monto)}`, color: COLORS.accent },
-      ]],
-      [200, 55, 75, 90, 95]
-    );
+    // Columnas: si hay actualización agrega columna de precio base
+    if (tieneActualizacion) {
+      y = drawTable(doc, y,
+        ['Descripción', 'Unid.', 'Cantidad', 'P. Base', 'Coef.', 'P. Actualizado', 'Monto'],
+        [[
+          c.titulo,
+          c.unidad,
+          { text: fmtCant(c.cantidad_certificada), color: COLORS.text },
+          { text: `$ ${fmt(c.precio_base)}`,        color: COLORS.muted },
+          { text: Number(c.coeficiente).toFixed(4), color: COLORS.muted },
+          { text: `$ ${fmt(c.precio_unitario)}`,    color: COLORS.text },
+          { text: `$ ${fmt(c.monto)}`,              color: COLORS.accent },
+        ]],
+        [145, 40, 65, 75, 50, 85, 75]
+      );
+    } else {
+      y = drawTable(doc, y,
+        ['Descripción', 'Unidad', 'Cantidad', 'Precio Unit.', 'Monto'],
+        [[
+          c.titulo,
+          c.unidad,
+          { text: fmtCant(c.cantidad_certificada), color: COLORS.text },
+          { text: c.precio_unitario ? `$ ${fmt(c.precio_unitario)}` : '—', color: COLORS.muted },
+          { text: `$ ${fmt(c.monto)}`, color: COLORS.accent },
+        ]],
+        [200, 55, 75, 90, 95]
+      );
+    }
 
     y += 4;
 
@@ -290,7 +340,15 @@ export const generarCertificadoTask = async (req, res, next) => {
          .text(`Observaciones: ${c.observaciones}`, 40, y, { width: doc.page.width - 80 });
     }
 
-    drawFooter(doc, c.empresa_nombre);
+    // Disclaimer legal de actualización de precios
+    const disclaimer = tieneActualizacion
+      ? `Precios actualizados según índice ${c.fuente_indice || 'de referencia'} correspondiente a ${fmtMes(c.mes_indice)}. ` +
+        `Precio de contrato original: $${fmt(c.precio_base)} / ${c.unidad}. ` +
+        `Coeficiente de actualización aplicado: ${Number(c.coeficiente).toFixed(6)}. ` +
+        `Precio actualizado: $${fmt(c.precio_unitario)} / ${c.unidad}.`
+      : null;
+
+    drawFooter(doc, c.empresa_nombre, disclaimer);
     doc.end();
 
   } catch (error) {

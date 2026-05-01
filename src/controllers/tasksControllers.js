@@ -464,6 +464,11 @@ export const getPagos = async (req, res, next) => {
                 p.fecha_emision,
                 p.fecha_pago,
                 p.created_at,
+                p.precio_base::float,
+                p.indice_aplicado::float,
+                p.mes_indice,
+                p.coeficiente::float,
+                p.fuente_indice,
                 SUM(p.monto) OVER (
                     PARTITION BY p.task_id
                     ORDER BY p.fecha_emision ASC, p.id ASC
@@ -487,10 +492,32 @@ export const getPagos = async (req, res, next) => {
 export const addPago = async (req, res, next) => {
     try {
         const taskId = Number(req.params.id);
-        const { cantidad_certificada, monto, tipo, observaciones, fecha_emision } = req.body;
+        const {
+            cantidad_certificada,
+            monto,
+            tipo,
+            observaciones,
+            fecha_emision,
+            indice_aplicado,
+            mes_indice,
+            coeficiente,
+            precio_base,
+            fuente_indice,
+        } = req.body;
 
-        const cantNum  = Number(cantidad_certificada);
-        const montoNum = Number(monto);
+        const cantNum        = Number(cantidad_certificada);
+        const montoNum       = Number(monto);
+        const coefNum        = coeficiente != null && coeficiente !== '' ? Number(coeficiente) : null;
+        const indiceNum      = indice_aplicado != null && indice_aplicado !== '' ? Number(indice_aplicado) : null;
+        const precioBaseNum  = precio_base != null && precio_base !== '' ? Number(precio_base) : null;
+
+        // Normalizar mes_indice al primer día del mes si viene como YYYY-MM
+        let mesIndiceNorm = null;
+        if (mes_indice) {
+            const m = new Date(mes_indice);
+            m.setDate(1);
+            mesIndiceNorm = isNaN(m) ? null : m.toISOString().slice(0, 10);
+        }
 
         if (isNaN(taskId))                          return res.status(400).json({ error: 'taskId inválido' });
         if (isNaN(cantNum)  || cantNum  <= 0)       return res.status(400).json({ error: 'Cantidad certificada inválida' });
@@ -503,10 +530,13 @@ export const addPago = async (req, res, next) => {
         if (taskCheck.rows.length === 0)            return res.status(404).json({ error: 'Tarea no encontrada' });
 
         const result = await pool.query(
-            `INSERT INTO pagos (task_id, cantidad_certificada, monto, tipo, observaciones, fecha_emision, estado)
-             VALUES ($1, $2, $3, $4, $5, COALESCE($6::date, CURRENT_DATE), 'pendiente')
+            `INSERT INTO pagos
+                (task_id, cantidad_certificada, monto, tipo, observaciones, fecha_emision, estado,
+                 precio_base, indice_aplicado, mes_indice, coeficiente, fuente_indice)
+             VALUES ($1,$2,$3,$4,$5, COALESCE($6::date, CURRENT_DATE),'pendiente', $7,$8,$9,$10,$11)
              RETURNING *`,
-            [taskId, cantNum, montoNum, tipo, observaciones || null, fecha_emision || null]
+            [taskId, cantNum, montoNum, tipo, observaciones || null, fecha_emision || null,
+             precioBaseNum, indiceNum, mesIndiceNorm, coefNum, fuente_indice?.trim() || null]
         );
 
         res.status(201).json(result.rows[0]);

@@ -338,7 +338,7 @@ export default function Arquitecto({ user, onLogout }) {
     <>
       <div style={card}>
         <h2 style={{ color: "#fff" }}>
-          {obras.find(o => o.id === obraAbierta)?.nombre}
+          {obras.find(o => Number(o.id) === Number(obraAbierta))?.nombre || "Obra no encontrada"}
         </h2>
 
         <ProgresoBar progreso={progreso[obraAbierta]} />
@@ -357,7 +357,11 @@ export default function Arquitecto({ user, onLogout }) {
       </div>
 
       <div style={{ marginTop: "16px" }}>
-        <AlertasVencimiento tasks={tasks[obraAbierta] || []} />
+        <AlertasVencimiento 
+  obras={obras.filter(o => o.id === obraAbierta)} 
+  tasks={tasks} 
+  certificados={{}} // Pasamos un objeto vacío para evitar que falle si no tienes certificados aún
+/>
       </div>
 
       <div style={{ marginTop: "16px" }}>

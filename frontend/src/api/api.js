@@ -77,6 +77,13 @@ export const deleteContacto  = (id) => authFetch(`${API}/contactos/${id}`, { met
 // ── FLUJO DE INVERSIÓN ────────────────────────────────────────────────────────
 export const getFlujoPorMes = (obraId) => authFetch(`${API}/obras/${obraId}/flujo`);
 
+// ── ÍNDICES CAC ───────────────────────────────────────────────────────────────
+export const getIndices       = ()         => authFetch(`${API}/indices`);
+export const getUltimosIndices = ()        => authFetch(`${API}/indices/ultimos`);
+export const addIndice        = (data)     => authFetch(`${API}/indices`,      { method: "POST",   body: JSON.stringify(data) });
+export const deleteIndice     = (id)       => authFetch(`${API}/indices/${id}`, { method: "DELETE" });
+export const aplicarCoeficiente = (data)  => authFetch(`${API}/indices/aplicar`, { method: "POST", body: JSON.stringify(data) });
+
 // ── FOTOS ─────────────────────────────────────────────────────────────────────
 export const getFotos       = (taskId) => authFetch(`${API}/fotos/task/${taskId}`);
 export const getFotosByObra = (obraId) => authFetch(`${API}/fotos/obra/${obraId}`);

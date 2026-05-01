@@ -2,12 +2,17 @@ import { useMemo } from "react";
 
 export default function AlertasVencimiento({ obras, tasks, certificados }) {
   const alertas = useMemo(() => {
+
+    if (!obras || !Array.isArray(obras)) return [];
     const hoy = new Date(); hoy.setHours(0,0,0,0);
     const lista = [];
+    
+
+
 
     // Tareas vencidas o por vencer
     obras.forEach(obra => {
-      const obraTasks = tasks[obra.id] || [];
+     const obraTasks = tasks && tasks[obra.id] ? tasks[obra.id] : [];
       obraTasks.forEach(t => {
         if (t.estado === "finalizada" || !t.fecha_fin) return;
         const fin = new Date(t.fecha_fin); fin.setHours(0,0,0,0);
@@ -40,7 +45,7 @@ export default function AlertasVencimiento({ obras, tasks, certificados }) {
 
       // Certificados pendientes de pago (más de 15 días)
       obraTasks.forEach(t => {
-        const certs = certificados[t.id] || [];
+        const certs = certificados && certificados[t.id] ? certificados[t.id] : [];
         certs.forEach(c => {
           if (c.estado !== "pendiente") return;
           const emision = new Date(c.fecha_emision); emision.setHours(0,0,0,0);
