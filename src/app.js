@@ -5,6 +5,11 @@ import path from 'path'
 import obrasRoutes from './routes_crud/obras.js'
 import tasksRoutes from './routes_crud/tasks.js'
 import authRoutes from './routes_crud/authRoutes.js'
+import pdfRoutes from './routes_crud/pdf_routes.js'
+import partesRoutes from './routes_crud/partes_routes.js'
+import contactosRoutes from './routes_crud/contactos_routes.js'
+import fotosRoutes from './routes_crud/fotos_routes.js'
+import indicesRoutes from './routes_crud/indices_routes.js'
 
 import logger from './middleware/logger.js'
 import errorHandler from './middleware/error.js'
@@ -24,11 +29,17 @@ app.use(logger)
 
 // static
 app.use(express.static(path.join(process.cwd(), 'public')))
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')))
 
 // rutas API
 app.use('/api/auth', authRoutes)
 app.use('/api/obras', obrasRoutes)
 app.use('/api/tasks', tasksRoutes)
+app.use('/api/pdf', pdfRoutes)
+app.use('/api/partes', partesRoutes)
+app.use('/api/contactos', contactosRoutes)
+app.use('/api/fotos', fotosRoutes)
+app.use('/api/indices', indicesRoutes)
 
 // 404 (SIEMPRE AL FINAL)
 app.use(notFound)

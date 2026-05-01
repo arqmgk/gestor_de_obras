@@ -3,7 +3,7 @@ import { createTask, updateTask } from "../api/api";
 
 const EMPTY = {
   titulo: "", estado: "pendiente", prioridad: "media",
-  unidad: "", cantidad_total: "", responsable: "",
+  unidad: "", cantidad_total: "", precio_unitario: "", responsable: "",
   fecha_inicio: "", fecha_fin: "",
 };
 
@@ -20,6 +20,7 @@ export default function TaskForm({ obraId, task, onSuccess, onCancel }) {
         prioridad: task.prioridad || "media",
         unidad: task.unidad || "",
         cantidad_total: task.cantidad_total ?? "",
+        precio_unitario: task.precio_unitario ?? "",
         responsable: task.responsable || "",
         fecha_inicio: task.fecha_inicio ? task.fecha_inicio.slice(0, 10) : "",
         fecha_fin: task.fecha_fin ? task.fecha_fin.slice(0, 10) : "",
@@ -39,6 +40,7 @@ export default function TaskForm({ obraId, task, onSuccess, onCancel }) {
         ...form,
         obraId: Number(obraId),
         cantidad_total: Number(form.cantidad_total),
+        precio_unitario: form.precio_unitario !== "" ? Number(form.precio_unitario) : null,
         fecha_inicio: form.fecha_inicio || null,
         fecha_fin: form.fecha_fin || null,
       };
@@ -72,6 +74,24 @@ export default function TaskForm({ obraId, task, onSuccess, onCancel }) {
           <input type="number" value={form.cantidad_total} onChange={e => set("cantidad_total", e.target.value)}
             placeholder="150" min="0" step="any"
             style={{ ...iS, width: "100%", boxSizing: "border-box" }} />
+        </div>
+      </div>
+
+      <div style={{ ...grid2, marginTop: "12px" }}>
+        <div>
+          <label style={lbl}>Precio unitario <span style={{ color: "#444" }}>(opc.)</span></label>
+          <input type="number" value={form.precio_unitario} onChange={e => set("precio_unitario", e.target.value)}
+            placeholder="0.00" min="0" step="any"
+            style={{ ...iS, width: "100%", boxSizing: "border-box" }} />
+        </div>
+        <div style={{ display: "flex", alignItems: "flex-end", paddingBottom: "2px" }}>
+          {form.precio_unitario && form.cantidad_total && (
+            <span style={{ color: "#555", fontSize: "12px" }}>
+              Presupuesto: <span style={{ color: "#60a5fa", fontWeight: "600" }}>
+                ${(Number(form.precio_unitario) * Number(form.cantidad_total)).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+              </span>
+            </span>
+          )}
         </div>
       </div>
 

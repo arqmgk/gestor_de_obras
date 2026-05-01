@@ -7,12 +7,12 @@ import {
   updateObra,
   deleteObra,
   getProgresoObra,
-  getTasksWithProgreso
+  getTasksWithProgreso,
+  getFlujoPorMes
 } from '../controllers/obrasController.js';
 
 const router = express.Router();
 
-// Todas las rutas requieren token
 router.use(authenticate);
 
 router.get('/', getObras);
@@ -20,6 +20,7 @@ router.post('/', createObra);
 
 router.get('/:id/progreso', getProgresoObra);
 router.get('/:id/tasks', getTasksWithProgreso);
+router.get('/:id/flujo', getFlujoPorMes);
 
 router.get('/:id', getObraById);
 router.put('/:id', updateObra);

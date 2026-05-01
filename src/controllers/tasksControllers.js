@@ -22,7 +22,11 @@ export const getTasks = async (req, res, next) => {
                     ELSE COALESCE(SUM(m.cantidad),0) * 100.0 / t.cantidad_total
                 END AS progreso
             FROM tasks t
-            LEFT JOIN mediciones m ON t.id = m.task_id
+            LEFT JOIN (
+                SELECT task_id, SUM(cantidad) AS cantidad
+                FROM mediciones
+                GROUP BY task_id
+            ) m ON t.id = m.task_id
         `;
 
         let values = [];
@@ -95,10 +99,12 @@ export const createTask = async (req, res, next) => {
             fecha_fin,
             responsable,
             unidad,
-            cantidad_total
+            cantidad_total,
+            precio_unitario
         } = req.body;
 
         const cantidadTotalNum = Number(cantidad_total);
+        const precioUnitarioNum = precio_unitario != null && precio_unitario !== '' ? Number(precio_unitario) : null;
 
         if (!titulo) {
             return res.status(400).json({ error: 'Falta título' });
@@ -114,6 +120,10 @@ export const createTask = async (req, res, next) => {
 
         if (isNaN(cantidadTotalNum) || cantidadTotalNum <= 0) {
             return res.status(400).json({ error: 'Cantidad total inválida' });
+        }
+
+        if (precioUnitarioNum !== null && (isNaN(precioUnitarioNum) || precioUnitarioNum < 0)) {
+            return res.status(400).json({ error: 'Precio unitario inválido' });
         }
 
         if (fecha_inicio && fecha_fin && fecha_inicio > fecha_fin) {
@@ -134,9 +144,9 @@ export const createTask = async (req, res, next) => {
             `INSERT INTO tasks (
                 titulo, estado, obra_id, prioridad,
                 fecha_inicio, fecha_fin, responsable,
-                unidad, cantidad_total
+                unidad, cantidad_total, precio_unitario
             )
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
             RETURNING *`,
             [
                 titulo,
@@ -147,7 +157,8 @@ export const createTask = async (req, res, next) => {
                 fecha_fin,
                 responsable,
                 unidad,
-                cantidadTotalNum
+                cantidadTotalNum,
+                precioUnitarioNum
             ]
         );
 
@@ -173,10 +184,12 @@ export const updateTask = async (req, res, next) => {
             fecha_fin,
             responsable,
             unidad,
-            cantidad_total
+            cantidad_total,
+            precio_unitario
         } = req.body;
 
         const cantidadTotalNum = Number(cantidad_total);
+        const precioUnitarioNum = precio_unitario != null && precio_unitario !== '' ? Number(precio_unitario) : null;
 
         if (isNaN(id)) {
             return res.status(400).json({ error: 'ID inválido' });
@@ -224,8 +237,9 @@ export const updateTask = async (req, res, next) => {
                  fecha_fin = $6,
                  responsable = $7,
                  unidad = $8,
-                 cantidad_total = $9
-             WHERE id = $10
+                 cantidad_total = $9,
+                 precio_unitario = $10
+             WHERE id = $11
              RETURNING *`,
             [
                 titulo,
@@ -237,6 +251,7 @@ export const updateTask = async (req, res, next) => {
                 responsable,
                 unidad,
                 cantidadTotalNum,
+                precioUnitarioNum,
                 id
             ]
         );
@@ -308,17 +323,20 @@ export const getProgresoTask = async (req, res, next) => {
                 t.titulo,
                 t.unidad,
                 COALESCE(t.cantidad_total, 0)::float AS cantidad_total,
-                COALESCE(SUM(m.cantidad), 0)::float AS ejecutado,
+                COALESCE(agg.ejecutado, 0)::float AS ejecutado,
                 ROUND(
                     CASE
                         WHEN COALESCE(t.cantidad_total, 0) = 0 THEN 0
-                        ELSE COALESCE(SUM(m.cantidad), 0) * 100.0 / t.cantidad_total
+                        ELSE LEAST(COALESCE(agg.ejecutado, 0) * 100.0 / t.cantidad_total, 100)
                     END
                 , 2)::float AS progreso
              FROM tasks t
-             LEFT JOIN mediciones m ON t.id = m.task_id
-             WHERE t.id = $1
-             GROUP BY t.id, t.titulo, t.unidad, t.cantidad_total`,
+             LEFT JOIN (
+               SELECT task_id, SUM(cantidad) AS ejecutado
+               FROM mediciones
+               GROUP BY task_id
+             ) agg ON t.id = agg.task_id
+             WHERE t.id = $1`,
             [taskId]
         );
 
@@ -338,7 +356,7 @@ export const getProgresoTask = async (req, res, next) => {
 export const addMedicion = async (req, res, next) => {
     try {
         const taskId = Number(req.params.id);
-        const { cantidad, observaciones } = req.body;
+        const { cantidad, observaciones, fecha } = req.body;
 
         const cantidadNum = Number(cantidad);
 
@@ -373,16 +391,15 @@ export const addMedicion = async (req, res, next) => {
         // Validar que no supere el total
         if (total > 0 && (ejecutado + cantidadNum > total)) {
             return res.status(400).json({
-                error: 'Supera la cantidad total de la tarea'
+                error: `Supera la cantidad total. Máximo restante: ${(total - ejecutado).toFixed(2)}`
             });
         }
 
-        // Insertar medición (SIN acumulado)
         const result = await pool.query(
-            `INSERT INTO mediciones (task_id, cantidad, observaciones)
-             VALUES ($1, $2, $3)
+            `INSERT INTO mediciones (task_id, cantidad, observaciones, fecha)
+             VALUES ($1, $2, $3, COALESCE($4::date, CURRENT_DATE))
              RETURNING *`,
-            [taskId, cantidadNum, observaciones || null]
+            [taskId, cantidadNum, observaciones || null, fecha || null]
         );
 
         res.status(201).json(result.rows[0]);
@@ -423,6 +440,119 @@ export const getMediciones = async (req, res, next) => {
 
         res.json(result.rows);
 
+    } catch (error) {
+        next(error);
+    }
+};
+
+// ── PAGOS / CERTIFICADOS ──────────────────────────────────────────────────────
+
+export const getPagos = async (req, res, next) => {
+    try {
+        const taskId = Number(req.params.id);
+        if (isNaN(taskId)) return res.status(400).json({ error: 'taskId inválido' });
+
+        const result = await pool.query(
+            `SELECT
+                p.id,
+                p.task_id,
+                p.cantidad_certificada::float,
+                p.monto::float,
+                p.tipo,
+                p.estado,
+                p.observaciones,
+                p.fecha_emision,
+                p.fecha_pago,
+                p.created_at,
+                SUM(p.monto) OVER (
+                    PARTITION BY p.task_id
+                    ORDER BY p.fecha_emision ASC, p.id ASC
+                )::float AS acumulado_monto,
+                SUM(p.cantidad_certificada) OVER (
+                    PARTITION BY p.task_id
+                    ORDER BY p.fecha_emision ASC, p.id ASC
+                )::float AS acumulado_cantidad
+             FROM pagos p
+             WHERE p.task_id = $1
+             ORDER BY p.fecha_emision ASC, p.id ASC`,
+            [taskId]
+        );
+
+        res.json(result.rows);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const addPago = async (req, res, next) => {
+    try {
+        const taskId = Number(req.params.id);
+        const { cantidad_certificada, monto, tipo, observaciones, fecha_emision } = req.body;
+
+        const cantNum  = Number(cantidad_certificada);
+        const montoNum = Number(monto);
+
+        if (isNaN(taskId))                          return res.status(400).json({ error: 'taskId inválido' });
+        if (isNaN(cantNum)  || cantNum  <= 0)       return res.status(400).json({ error: 'Cantidad certificada inválida' });
+        if (isNaN(montoNum) || montoNum <= 0)       return res.status(400).json({ error: 'Monto inválido' });
+
+        const tiposValidos = ['anticipo', 'certificado', 'final'];
+        if (!tiposValidos.includes(tipo))           return res.status(400).json({ error: 'Tipo inválido. Usar: anticipo, certificado, final' });
+
+        const taskCheck = await pool.query('SELECT id FROM tasks WHERE id = $1', [taskId]);
+        if (taskCheck.rows.length === 0)            return res.status(404).json({ error: 'Tarea no encontrada' });
+
+        const result = await pool.query(
+            `INSERT INTO pagos (task_id, cantidad_certificada, monto, tipo, observaciones, fecha_emision, estado)
+             VALUES ($1, $2, $3, $4, $5, COALESCE($6::date, CURRENT_DATE), 'pendiente')
+             RETURNING *`,
+            [taskId, cantNum, montoNum, tipo, observaciones || null, fecha_emision || null]
+        );
+
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        console.error(error);
+        next(error);
+    }
+};
+
+export const marcarPagado = async (req, res, next) => {
+    try {
+        const pagoId = Number(req.params.pagoId);
+        const { fecha_pago } = req.body;
+
+        if (isNaN(pagoId)) return res.status(400).json({ error: 'pagoId inválido' });
+
+        const result = await pool.query(
+            `UPDATE pagos
+             SET estado = 'pagado',
+                 fecha_pago = COALESCE($2::date, CURRENT_DATE)
+             WHERE id = $1 AND estado = 'pendiente'
+             RETURNING *`,
+            [pagoId, fecha_pago || null]
+        );
+
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Certificado no encontrado o ya estaba pagado' });
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const deletePago = async (req, res, next) => {
+    try {
+        const pagoId = Number(req.params.pagoId);
+        if (isNaN(pagoId)) return res.status(400).json({ error: 'pagoId inválido' });
+
+        const result = await pool.query(
+            'DELETE FROM pagos WHERE id = $1 RETURNING *',
+            [pagoId]
+        );
+
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Certificado no encontrado' });
+
+        res.json({ message: 'Certificado eliminado', pago: result.rows[0] });
     } catch (error) {
         next(error);
     }

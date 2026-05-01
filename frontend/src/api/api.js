@@ -51,3 +51,51 @@ export const getProgresoTask = (id) => authFetch(`${API}/tasks/${id}/progreso`);
 // ── MEDICIONES ────────────────────────────────────
 export const getMediciones = (taskId) => authFetch(`${API}/tasks/${taskId}/mediciones`);
 export const addMedicion = (taskId, data) => authFetch(`${API}/tasks/${taskId}/mediciones`, { method: "POST", body: JSON.stringify(data) });
+
+// ── PDF ───────────────────────────────────────────────────────────────────────
+export const urlCertificadoTask = (taskId, pagoId) =>
+  `${API}/pdf/certificado/task/${taskId}/pago/${pagoId}`;
+export const urlCertificadoObra = (obraId) =>
+  `${API}/pdf/certificado/obra/${obraId}`;
+export const getPagos     = (taskId) => authFetch(`${API}/tasks/${taskId}/pagos`);
+export const addPago      = (taskId, data) => authFetch(`${API}/tasks/${taskId}/pagos`, { method: "POST", body: JSON.stringify(data) });
+export const marcarPagado = (taskId, pagoId, data = {}) => authFetch(`${API}/tasks/${taskId}/pagos/${pagoId}/pagar`, { method: "PATCH", body: JSON.stringify(data) });
+export const deletePago   = (taskId, pagoId) => authFetch(`${API}/tasks/${taskId}/pagos/${pagoId}`, { method: "DELETE" });
+// ── PARTE DIARIO ──────────────────────────────────────────────────────────────
+export const getParte        = (obraId, fecha) => authFetch(`${API}/partes/obra/${obraId}${fecha ? `?fecha=${fecha}` : ''}`);
+export const getPartesHistorial = (obraId) => authFetch(`${API}/partes/obra/${obraId}/historial`);
+export const updateParte     = (parteId, data) => authFetch(`${API}/partes/${parteId}`, { method: "PATCH", body: JSON.stringify(data) });
+export const addPersona      = (parteId, data) => authFetch(`${API}/partes/${parteId}/personas`, { method: "POST", body: JSON.stringify(data) });
+export const deletePersona   = (parteId, personaId) => authFetch(`${API}/partes/${parteId}/personas/${personaId}`, { method: "DELETE" });
+
+// ── CONTACTOS ─────────────────────────────────────────────────────────────────
+export const getContactos    = (obraId) => authFetch(`${API}/contactos/obra/${obraId}`);
+export const addContacto     = (obraId, data) => authFetch(`${API}/contactos/obra/${obraId}`, { method: "POST", body: JSON.stringify(data) });
+export const updateContacto  = (id, data) => authFetch(`${API}/contactos/${id}`, { method: "PUT", body: JSON.stringify(data) });
+export const deleteContacto  = (id) => authFetch(`${API}/contactos/${id}`, { method: "DELETE" });
+
+// ── FLUJO DE INVERSIÓN ────────────────────────────────────────────────────────
+export const getFlujoPorMes = (obraId) => authFetch(`${API}/obras/${obraId}/flujo`);
+
+// ── FOTOS ─────────────────────────────────────────────────────────────────────
+export const getFotos       = (taskId) => authFetch(`${API}/fotos/task/${taskId}`);
+export const getFotosByObra = (obraId) => authFetch(`${API}/fotos/obra/${obraId}`);
+export const deleteFoto     = (taskId, fotoId) => authFetch(`${API}/fotos/task/${taskId}/${fotoId}`, { method: "DELETE" });
+
+export const subirFoto = async (taskId, file, { latitud, longitud, descripcion, timestamp } = {}) => {
+  const token = localStorage.getItem('token');
+  const form  = new FormData();
+  form.append('foto', file);
+  if (latitud)     form.append('latitud',     latitud);
+  if (longitud)    form.append('longitud',    longitud);
+  if (descripcion) form.append('descripcion', descripcion);
+  if (timestamp)   form.append('timestamp',   timestamp);
+
+  const res = await fetch(`${API}/fotos/task/${taskId}`, {
+    method:  'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body:    form,
+    // NO incluir Content-Type — el browser lo pone con el boundary automático
+  });
+  return res.json();
+};
